@@ -19,7 +19,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Spec
 @keyframes g{33%{background-position:40px 20px}66%{background-position:-30px 60px}}
 #camfx{display:none;background:repeating-linear-gradient(rgba(0,0,0,.25) 0 2px,transparent 2px 4px),rgba(40,120,70,.18);mix-blend-mode:screen}
 #redfx{opacity:0;background:radial-gradient(ellipse at center,rgba(120,0,0,.15) 10%,rgba(210,0,0,.8) 100%)}
-#alarmfx{opacity:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(255,70,0,.6) 100%)}
+#alarmfx{opacity:0;background:none;box-shadow:inset 0 0 70px 14px rgba(255,70,0,.7)}
 #flash{background:#b3261a;opacity:0}#flash.go{animation:fl 1.6s forwards}
 @keyframes fl{0%{opacity:.95}15%{opacity:0}30%{opacity:.7}45%{opacity:0}100%{opacity:0}}
 #hud{position:fixed;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 0 6px #000;pointer-events:none;font-size:18px}
@@ -219,6 +219,7 @@ slab(0,.45,-2.4,3.2,.9,1,mat(0x3a2e24));
 const monitor=slab(0,1.1,-2.5,1,.65,.06,mat(0x0a1a10,0x1a8a4a));slab(0,.95,-2.5,.15,.3,.1,mat(0x111111));
 // Lights
 const amb=new G.AmbientLight(0x2a3d32,.8);scene.add(amb);
+const dayLight=new G.HemisphereLight(0xfff6e0,0x8f978c,0);scene.add(dayLight);
 const lamp=new G.PointLight(0xb8cca8,1.2,11);lamp.position.set(0,2.8,0);lamp.castShadow=true;lamp.shadow.mapSize.set(512,512);lamp.shadow.bias=-.003;lamp.shadow.camera.far=12;scene.add(lamp);
 const winLight=new G.PointLight(0xdfe8ff,0,13);winLight.position.set(0,2.6,-6.5);scene.add(winLight);
 const camLight=new G.PointLight(0xaaffcc,0,18);scene.add(camLight);
@@ -359,7 +360,8 @@ MODELS.cap=function(g){const K=0xa8452a,D=0x5a1e12,Mt=0x9aa0a4,T=0xe8e2cf;
  for(let i=0;i<7;i++)[-1,1].forEach(s=>{ad(g,cone(.025,.09),T,s*.12,1.79,.22+i*.07,{b:1,r:[Math.PI,0,0]});ad(g,cone(.02,.07),T,s*.11,1.74,.22+i*.07,{b:1})});
  [-1,1].forEach(s=>ad(g,sph(.08),K,s*.12,2.1,.2));ad(g,sph(.045),0xffd84a,-.12,2.12,.27,{b:1});ad(g,sph(.075),0x000000,.12,2.1,.27,{s:[1,1,.4],b:1});ad(g,box(.6,.02,.02),0x000000,0,2.12,.22,{b:1,r:[0,0,.2]});
  ad(g,cyl(.27,.25,.1),0x1a3a6a,0,2.22,0);ad(g,cone(.14,.9),K,0,.9,-.55,{r:[-1.9,0,0]});
- g.children.forEach(c=>{if(c.material&&!c.material.isMeshBasicMaterial)c.material.emissive.set(0x4a2012)})};
+ const halo=new G.Mesh(new G.SphereGeometry(.55,16,12),new G.MeshBasicMaterial({color:0xff9a3a,transparent:true,opacity:.16,depthWrite:false}));halo.position.set(0,1.5,.1);g.add(halo);
+ g.children.forEach(c=>{if(c.material){c.material.fog=false;if(!c.material.isMeshBasicMaterial)c.material.emissive.set(0x7a3418)}})};
 // Mr. Pennington: the manager. Pale, smiling too wide, black eyes.
 MODELS.man=function(g){const S=0x1f2128,W=0xe8e6de,SK=0xdcc9b4;
  [-1,1].forEach(s=>{limb(g,[s*.14,.95,0],[s*.15,.08,0],.09,.07,S);ad(g,box(.14,.07,.3),0x0a0a0a,s*.15,.04,.08);limb(g,[s*.33,1.5,0],[s*.4,.85,.06],.07,.055,S);ad(g,sph(.06),SK,s*.4,.8,.07)});
@@ -539,7 +541,7 @@ function startDay(d,startHour){
   initAudio();phase="day";dayN=d;night=Math.max(1,d-1);tick=Math.round((startHour||0)*HOUR_SECS/3.5);power=100;hp=100;door={L:0,R:0};wl=sh=ht=0;outT=null;js=null;forced=false;playDead=false;escapeOn=false;exploreOnly=false;paused=false;
   alarm={on:false,t:0,used:false};vent={s:"idle",cd:0,t:0,heat:0};smile={s:"gone",t:0,w:0,c:0};bb={s:"gone",at:0};sw={s:"gone",t:0,y:1.5};cove={s:"closed",cd:20,t:0,D:5};eh={on:false,t:0,at:-1};
   [ventMon,smileMon,swMon,coveMon,bbMon].forEach(o=>{o.mesh.visible=false;o.mesh.scale.setScalar(1)});$("flash").classList.remove("go");$("ehbar").style.display="none";$("orange").classList.remove("show");
-  layout();playKey.visible=false;exitKey.visible=false;setCam(false);P={x:0,z:0,yaw:0,pitch:0};look.kp=0;unlock("day");
+  layout();placeNPCs();playKey.visible=false;exitKey.visible=false;setCam(false);P={x:0,z:0,yaw:0,pitch:0};look.kp=0;unlock("day");
   mons=DEFS.map(dd=>({...dd,room:"gone",cd:9,deadline:0,side:null,sw:0,banned:true,aggr:0}));
   hideAll();$("phl").textContent="Day";$("n").textContent=d;$("cardt").textContent="Day "+d;$("cardp").textContent="6:00 AM";$("card").classList.add("show");setTimeout(()=>{$("card").classList.remove("show");$("cardp").textContent="12:00 AM"},2400);
   running=true;clearInterval(timer);timer=setInterval(step,1000);ui()}
@@ -680,7 +682,7 @@ function frame(now){
   if(shake>0)shake-=dt;
   camLight.intensity=camOpen?1.5:(escapeOn?1:0);if(camOpen||escapeOn)camLight.position.copy(camera.position);
   const flick=Math.random()<.025;
-  const dayL=phase=="day"&&running,out=running&&power<=0&&!dayL;lamp.intensity=dayL?1.6:(out?.3:(1.2-(flick?.9:0)-Math.min(night,8)*.02));amb.intensity=dayL?1.3:(out?.55:.8);tubeLight.material.emissiveIntensity=out?.05:(flick?.2:1);
+  const dayL=phase=="day"&&running,out=running&&power<=0&&!dayL;lamp.intensity=dayL?2.2:(out?.3:(1.2-(flick?.9:0)-Math.min(night,8)*.02));amb.intensity=dayL?1.7:(out?.55:.8);dayLight.intensity=dayL?1.6:0;{const bg=dayL?0xcfd9d0:0x010302;scene.background.set(bg);scene.fog.color.set(bg);scene.fog.density=dayL?.012:.06}tubeLight.material.emissiveIntensity=out?.05:(flick?.2:1);
   winLight.intensity=wl?2.4:0;ventMat.emissive.set(ht?0xaa3300:0);
   btnMeshes.L.material.emissive.set(door.L?0xff2200:0x220000);btnMeshes.R.material.emissive.set(door.R?0xff2200:0x220000);btnMeshes.sh.material.emissive.set(sh?0xff2200:0x220000);
   btnMeshes.wl.material.emissive.set(wl?0xffaa22:0x221800);btnMeshes.ht.material.emissive.set(ht?0xff6a00:0x221000);
@@ -690,9 +692,9 @@ function frame(now){
   shutter.position.y+=((sh?2.1:3.35)-shutter.position.y)*.2;
   lockDoors.forEach(d=>{const t=(d.userData.closed&&!got.closet)?1.2:4.2;d.position.y+=(t-d.position.y)*.15});
   playKey.rotation.y+=dt*2;exitKey.rotation.y+=dt*2;
-  dust.rotation.y+=dt*.02;dust.position.y=Math.sin(now/4000)*.1;window.dust2.position.y=Math.sin(now/5000)*.12;
+  npcTick(dt,phase=="day"&&running);dust.rotation.y+=dt*.02;dust.position.y=Math.sin(now/4000)*.1;window.dust2.position.y=Math.sin(now/5000)*.12;
   const al=alarm.on&&running;
-  $("alarmfx").style.opacity=al?(Math.sin(now/130)>0?.5:.15):0;alarmLight.intensity=al?(Math.sin(now/130)>0?2.2:.2):0;
+  $("alarmfx").style.opacity=al?(Math.sin(now/130)>0?.9:.3):0;alarmLight.intensity=al?(Math.sin(now/130)>0?1.2:.2):0;
   if(al&&now>=nextSiren){sfx.siren();nextSiren=now+800}
   // Door and window attackers, resolved in real time so the 20 ms window is possible
   if(running&&!guest())for(const m of mons){
@@ -747,7 +749,7 @@ function frame(now){
   cAmt+=((cove.s=="closed"?0:1)-cAmt)*Math.min(1,dt*3);
   curtL.scale.z=1-.8*cAmt;curtL.position.z=-8.85-1.08*cAmt;curtR.scale.z=1-.8*cAmt;curtR.position.z=-6.15+1.08*cAmt;coveSign.visible=cove.s=="closed";
   if(!(js&&js.m===coveMon)){
-    if(running&&cove.s!="closed"){const run=cove.s=="run",p=run?Math.min(1,cove.t/cove.D):0;cm.visible=true;cm.position.set(-10.2+7.6*p,run?Math.abs(Math.sin(now/70))*.12:0,-7.5+2.1*p);cm.rotation.set(run?.25:0,1.3,0);coveLight.intensity=2.2;coveLight.position.set(cm.position.x+.3,1.7,cm.position.z+.9)}else{cm.visible=false;coveLight.intensity=0}}
+    if(running&&cove.s!="closed"){const run=cove.s=="run",p=run?Math.min(1,cove.t/cove.D):0;cm.visible=true;cm.position.set(-10.2+7.6*p,(p<.06?.6*(1-p/.06):0)+(run?Math.abs(Math.sin(now/70))*.12:0),-7.5+2.1*p);cm.rotation.set(run?.25:0,1.3,0);coveLight.intensity=2.2;coveLight.position.set(cm.position.x+.3,1.7,cm.position.z+.9)}else{cm.visible=false;coveLight.intensity=0}}
   // Door alert: red screen + heartbeat
   const threat=running&&mons.some(m=>!m.banned&&/door/.test(m.room));
   $("redfx").style.opacity=threat?.55+.35*Math.sin(now/140):0;
@@ -769,6 +771,21 @@ function frame(now){
   }else mons.forEach(m=>m.mesh.scale.setScalar(1));
   renderer.render(scene,camera);
 }
+// ---------- Daytime customers and staff ----------
+function makePerson(skin,shirt,pants,hair,sc){const g=new G.Group();
+  ad(g,sph(.2),skin,0,1.55,0);ad(g,sph(.21),hair,0,1.62,-.03,{s:[1,.75,1]});[-1,1].forEach(q=>ad(g,sph(.035),0x111111,q*.07,1.57,.17,{b:1}));
+  limb(g,[0,1.4,0],[0,.88,0],.17,.15,shirt);ad(g,sph(.16),shirt,0,1.36,0,{s:[1.1,.5,.8]});
+  const piv=(x,y,len,r1,r2,c)=>{const q=new G.Group();q.position.set(x,y,0);limb(q,[0,0,0],[0,-len,0],r1,r2,c);g.add(q);return q};
+  g.userData.l=[piv(-.09,.88,.82,.075,.06,pants),piv(.09,.88,.82,.075,.06,pants)];g.userData.a=[piv(-.23,1.36,.6,.055,.045,skin),piv(.23,1.36,.6,.055,.045,skin)];
+  g.scale.setScalar(sc);g.visible=false;scene.add(g);return g}
+const npcs=[],SK=[0xf1c9a0,0xd9a577,0x8d5a3b,0xc68a5e,0xf7d6b8],SH=[0xc0392b,0x2980b9,0x27ae60,0xf1c40f,0x8e44ad,0xe67e22,0x16a085],PN=[0x2c3e50,0x34495e,0x5d4037,0x1f2a3a],HR=[0x1a1208,0x3b2a1a,0x7a5a2a,0xb08a4a,0x222222];
+[["dining",6],["arcade",3],["play",3,.7],["kitchen",2],["hall",3],["corr",2]].forEach(([home,n,sc])=>{for(let i=0;i<n;i++)npcs.push({g:makePerson(rnd(SK),rnd(SH),rnd(PN),rnd(HR),sc||1),home,x:0,z:0,tx:0,tz:0,w:Math.random()*2,sp:.7+Math.random()*.5,ph:Math.random()*6,walk:0})});
+function npcPick(n){let q;if(n.home=="hall")q=[R(-2,2),R(-42,-13)];else if(n.home=="corr")q=[R(-9,9),R(-9.2,-5.6)];else q=at(n.home,R(-4.3,4),R(-3.4,3.4));n.tx=q[0];n.tz=q[1]}
+function placeNPCs(){npcs.forEach(n=>{npcPick(n);n.x=n.tx;n.z=n.tz;npcPick(n)})}
+function npcTick(dt,on){npcs.forEach(n=>{n.g.visible=on;if(!on)return;
+  const dx=n.tx-n.x,dz=n.tz-n.z,d=Math.hypot(dx,dz);
+  if(d<.15){n.w-=dt;if(n.w<=0){npcPick(n);n.w=.5+Math.random()*2.5}n.walk=0}else{const sp=n.sp*dt;n.x+=dx/d*sp;n.z+=dz/d*sp;n.g.rotation.y=Math.atan2(dx,dz);n.walk=1}
+  n.ph+=dt*(n.walk?6:0);const sw=n.walk?Math.sin(n.ph)*.6:0,l=n.g.userData.l,a=n.g.userData.a;l[0].rotation.x=sw;l[1].rotation.x=-sw;a[0].rotation.x=-sw;a[1].rotation.x=sw;n.g.position.set(n.x,Math.abs(Math.sin(n.ph))*.03,n.z)})}
 // ---------- 2 players: join code, host runs the game, guest walks with them ----------
 const net={on:false,host:false,code:"",room:null,seq:0,lastCmd:0,lastG:null,lastEv:0,evSeq:0,tG:0,tP:0,other:null,started:false,gone:0};
 const guest=()=>net.on&&!net.host;
