@@ -70,8 +70,8 @@ input[type=checkbox]{width:20px;height:20px}
   <h1>Five Nights at Aarav's Pizzeria</h1>
   <p>Survive until 6:00 AM. Every in-game hour is one real minute. Click the buttons on the office walls, click the monitor for the cameras. Beat all five nights, then find a way out.</p>
   <div class="row"><button class="big" id="play">PLAY</button><button id="newbtn" style="display:none">New game</button></div>
-  <div class="row"><button id="achbtn">Achievements</button><button id="monbtn">Monsters</button><button id="setbtn">Settings</button></div>
-  <p>Look: mouse, touchpad, drag, WASD or arrow keys. In-game, press Ctrl + C for the Control Panel.</p>
+  <div class="row"><button id="achbtn">Achievements</button><button id="monbtn">Monsters</button><button id="expbtn">Explore</button><button id="setbtn">Settings</button></div>
+  <p>Walk: W A S D. Look: arrow keys, mouse near the screen sides, drag, or touchpad scroll. E picks things up. Press Explore to practice finding the keys with no monsters.</p>
   <p class="ver" id="ver"></p>
 </div>
 <div class="ov" id="achov"><h1>Achievements</h1><p id="achc"></p><div id="achl"></div><button id="achback">Back</button></div>
@@ -79,12 +79,12 @@ input[type=checkbox]{width:20px;height:20px}
 <div class="ov" id="settings"><h1>Settings</h1>
   <div id="setl">
     <label>Volume <input type="range" id="stvol" min="0" max="100" value="100"></label>
-    <label>Brightness <input type="range" id="stbri" min="60" max="220" value="130"></label>
+    <label>Brightness <input type="range" id="stbri" min="60" max="220" value="150"></label>
     <label>Look sensitivity <input type="range" id="stsens" min="40" max="200" value="100"></label>
     <label>Screen grain and vignette <input type="checkbox" id="stfx" checked></label>
-    <p>Look: mouse, touchpad (two-finger scroll), drag, WASD or arrow keys. Escape phase: WASD walks, arrows turn, E interacts. Ctrl + C opens the Control Panel.</p>
+    <p>Walk: W A S D. Look: arrow keys, mouse near the left or right edge, drag, or touchpad two-finger scroll. E picks up keys and opens doors. Space opens and closes the cameras (only from the office), 1 to 9 pick a camera.</p>
   </div>
-  <button class="big" id="stback">Back</button></div>
+  <div class="row"><button class="big" id="stback">Back</button><button id="stquit">Quit to menu</button></div></div>
 <div class="ov" id="cpanel"><h1>Control Panel</h1><p>The game is paused. Press Ctrl + C again to close.</p>
   <div id="cpl">
     <div class="line">Difficulty <span class="row"><button id="dEasy">Easy</button><button id="dNorm" class="on">Normal</button><button id="dHard">Hard</button></span></div>
@@ -99,14 +99,14 @@ input[type=checkbox]{width:20px;height:20px}
 <div class="ov" id="win"><h1 id="wint1">6:00 AM</h1><p id="wint"></p><div class="row"><button id="next" class="big">Next night</button><button id="tomenu">Main menu</button></div></div>
 
 <script>
-const VERSION="2.0.0",CHANGES="Walkable scrambled pizzeria and an escape ending, smoother Sunny and Grinner, a real fire alarm, Settings vs Control Panel, Bobbin asks nicely, bigger button text.";
+const VERSION="2.3.0",CHANGES="Walk around the pizzeria with WASD during the nights too. Grab keys any time. Don't wander into monsters.";
 const $=id=>document.getElementById(id),G=THREE,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 if(!window.THREE)document.body.innerHTML="<p style='padding:30px'>3D engine failed to load. Check your connection and reload.</p>";
 $("ver").textContent="Version "+VERSION+". What's new: "+CHANGES;
-const scene=new G.Scene();scene.background=new G.Color(0x010302);scene.fog=new G.FogExp2(0x010302,.07);
+const scene=new G.Scene();scene.background=new G.Color(0x010302);scene.fog=new G.FogExp2(0x010302,.06);
 const camera=new G.PerspectiveCamera(75,1,.1,90);camera.rotation.order="YXZ";
 const renderer=new G.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.outputEncoding=G.sRGBEncoding;renderer.toneMapping=G.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;
+renderer.outputEncoding=G.sRGBEncoding;renderer.toneMapping=G.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=G.PCFSoftShadowMap;
 $("stage3d").appendChild(renderer.domElement);
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
@@ -118,8 +118,18 @@ const grime=(x,s,n,a)=>{for(let i=0;i<n;i++){x.fillStyle=`rgba(0,0,0,${Math.rand
 const floorT=ctex((x,s)=>{x.fillStyle="#3a3d37";x.fillRect(0,0,s,s);x.fillStyle="#2a2d28";x.fillRect(0,0,s/2,s/2);x.fillRect(s/2,s/2,s/2,s/2);x.strokeStyle="#0b0d0b";x.lineWidth=4;x.strokeRect(0,0,s,s);grime(x,s,1200,.45)});
 const wallT=ctex((x,s)=>{x.fillStyle="#4a5249";x.fillRect(0,0,s,s);for(let i=0;i<40;i++){x.fillStyle=`rgba(0,0,0,${Math.random()*.2})`;x.fillRect(Math.random()*s,0,Math.random()*9,s)}x.fillStyle="rgba(20,25,20,.5)";x.fillRect(0,s*.78,s,s*.22);grime(x,s,1800,.4)});
 wallT.repeat.set(2,1);
-const floorMat=(w,d)=>{const t=floorT.clone();t.needsUpdate=true;t.repeat.set(w/2.5,d/2.5);return new G.MeshStandardMaterial({map:t,roughness:.55,metalness:.05})};
-const wallM=new G.MeshStandardMaterial({map:wallT,roughness:.9});
+// Extra grime painted into the wall and floor textures: water streaks, damp stains, peeling flakes, scratches, scuffs, dirt
+(function(){const S=256,w=wallT.image.getContext("2d"),f=floorT.image.getContext("2d");
+ for(let i=0;i<14;i++){const x=Math.random()*S,g=w.createLinearGradient(0,0,0,S);g.addColorStop(0,"rgba(30,20,8,0)");g.addColorStop(.25,`rgba(30,20,8,${.12+Math.random()*.22})`);g.addColorStop(1,"rgba(30,20,8,0)");w.fillStyle=g;w.fillRect(x,Math.random()*50,2+Math.random()*6,S)}
+ for(let i=0;i<10;i++){const x=Math.random()*S,y=Math.random()*S,r=15+Math.random()*40,g=w.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,"rgba(10,8,4,.4)");g.addColorStop(1,"rgba(10,8,4,0)");w.fillStyle=g;w.fillRect(x-r,y-r,r*2,r*2)}
+ for(let i=0;i<30;i++){w.fillStyle=`rgba(175,180,165,${.07+Math.random()*.12})`;w.beginPath();w.ellipse(Math.random()*S,Math.random()*S,2+Math.random()*7,1+Math.random()*4,Math.random()*3,0,6.3);w.fill()}
+ w.strokeStyle="rgba(0,0,0,.4)";for(let i=0;i<10;i++){w.beginPath();let x=Math.random()*S,y=Math.random()*S;w.moveTo(x,y);for(let k=0;k<5;k++){x+=Math.random()*18-9;y+=Math.random()*16;w.lineTo(x,y)}w.stroke()}
+ for(let i=0;i<16;i++){const x=Math.random()*S,y=Math.random()*S,r=10+Math.random()*34,g=f.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,"rgba(12,8,4,.45)");g.addColorStop(1,"rgba(12,8,4,0)");f.fillStyle=g;f.fillRect(x-r,y-r,r*2,r*2)}
+ f.strokeStyle="rgba(190,190,180,.1)";for(let i=0;i<40;i++){f.beginPath();const x=Math.random()*S,y=Math.random()*S;f.moveTo(x,y);f.lineTo(x+Math.random()*30-15,y+Math.random()*30-15);f.stroke()}
+ wallT.needsUpdate=true;floorT.needsUpdate=true})();
+const floorMat=(w,d)=>{const t=floorT.clone();t.needsUpdate=true;t.repeat.set(w/2.5,d/2.5);const b=bumpT.clone();b.needsUpdate=true;b.repeat.copy(t.repeat);return new G.MeshStandardMaterial({map:t,roughness:.55,metalness:.05,bumpMap:b,bumpScale:1})};
+const bumpT=ctex((x,s)=>{x.fillStyle="#808080";x.fillRect(0,0,s,s);for(let i=0;i<3000;i++){const v=Math.floor(70+Math.random()*120);x.fillStyle=`rgb(${v},${v},${v})`;x.fillRect(Math.random()*s,Math.random()*s,1+Math.random()*3,1+Math.random()*3)}});
+const wallM=new G.MeshStandardMaterial({map:wallT,roughness:.9,bumpMap:bumpT,bumpScale:1.2});
 const mat=(c,e)=>new G.MeshStandardMaterial({color:c,roughness:.8,emissive:e||0});
 const metal=new G.MeshStandardMaterial({color:0x7a847e,roughness:.35,metalness:.7});
 function labelTex(t,bg="#111",fg="#f4f8f2"){const c=document.createElement("canvas");c.width=512;c.height=160;const x=c.getContext("2d");x.fillStyle=bg;x.fillRect(0,0,512,160);x.fillStyle=fg;x.textAlign="center";x.textBaseline="middle";const L=t.split("|"),s=L.length>1?66:80;x.font="bold "+s+"px Arial,sans-serif";L.forEach((l,i)=>x.fillText(l,256,80+(i-(L.length-1)/2)*s*1.05));const tx=new G.CanvasTexture(c);tx.encoding=G.sRGBEncoding;tx.anisotropy=4;return tx}
@@ -183,8 +193,8 @@ const coveSign=new G.Mesh(new G.PlaneGeometry(1.2,.6),new G.MeshBasicMaterial({m
 slab(0,.45,-2.4,3.2,.9,1,mat(0x3a2e24));
 const monitor=slab(1.3,1.1,-2.5,1,.65,.06,mat(0x0a1a10,0x1a8a4a));slab(1.3,.95,-2.5,.15,.3,.1,mat(0x111111));
 // Lights
-scene.add(new G.AmbientLight(0x2a3d32,.6));
-const lamp=new G.PointLight(0xb8cca8,1,11);lamp.position.set(0,2.8,0);lamp.castShadow=true;lamp.shadow.mapSize.set(512,512);lamp.shadow.bias=-.003;lamp.shadow.camera.far=12;scene.add(lamp);
+const amb=new G.AmbientLight(0x2a3d32,.8);scene.add(amb);
+const lamp=new G.PointLight(0xb8cca8,1.2,11);lamp.position.set(0,2.8,0);lamp.castShadow=true;lamp.shadow.mapSize.set(512,512);lamp.shadow.bias=-.003;lamp.shadow.camera.far=12;scene.add(lamp);
 const winLight=new G.PointLight(0xdfe8ff,0,13);winLight.position.set(0,2.6,-6.5);scene.add(winLight);
 const camLight=new G.PointLight(0xaaffcc,0,18);scene.add(camLight);
 const alarmLight=new G.PointLight(0xff2200,0,14);alarmLight.position.set(0,2.8,-1);scene.add(alarmLight);
@@ -204,8 +214,40 @@ wallBtn("L","LEFT|DOOR",-3.7,1.5,-3.97);wallBtn("wl","WINDOW|LIGHT",-1.4,2.0,-3.
 wallBtn("ht","HEAT|VENT",1.4,2.0,-3.97);pullStation(1.4,1.3,-3.97);wallBtn("R","RIGHT|DOOR",3.7,1.5,-3.97);
 monitor.userData.key="cam";clickables.push(monitor);
 const camSign=new G.Mesh(new G.PlaneGeometry(.8,.25),new G.MeshBasicMaterial({map:labelTex("CAMERAS")}));camSign.position.set(1.3,1.58,-2.46);scene.add(camSign);
+// ---------- Grime decals, clutter and details ----------
+function decalTex(kind){const c=document.createElement("canvas");c.width=c.height=128;const x=c.getContext("2d");
+ if(kind=="stain"){const g=x.createRadialGradient(64,64,4,64,64,62);g.addColorStop(0,"rgba(25,16,6,.8)");g.addColorStop(.6,"rgba(25,16,6,.32)");g.addColorStop(1,"rgba(25,16,6,0)");x.fillStyle=g;x.fillRect(0,0,128,128)}
+ else if(kind=="web"){x.strokeStyle="rgba(225,230,220,.6)";x.lineWidth=1;for(let i=0;i<7;i++){const a=i/6*Math.PI/2;x.beginPath();x.moveTo(0,0);x.lineTo(Math.cos(a)*125,Math.sin(a)*125);x.stroke()}for(let r=18;r<120;r+=17){x.beginPath();for(let i=0;i<=6;i++){const a=i/6*Math.PI/2,rr=r+(Math.random()-.5)*5;x.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}x.stroke()}}
+ else{x.strokeStyle="rgba(0,0,0,.75)";x.lineWidth=2;x.beginPath();let px=64,py=0;x.moveTo(px,py);for(let i=0;i<8;i++){px+=Math.random()*30-15;py+=16;x.lineTo(px,py)}x.stroke()}
+ const t=new G.CanvasTexture(c);t.encoding=G.sRGBEncoding;return t}
+const DT={stain:decalTex("stain"),web:decalTex("web"),crack:decalTex("crack")};
+function decal(kind,w,h,x,y,z,rx,ry,rz){const m=new G.Mesh(new G.PlaneGeometry(w,h),new G.MeshBasicMaterial({map:DT[kind],transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,color:kind=="web"?0xb8c0b4:0x888888}));m.position.set(x,y,z);m.rotation.set(rx,ry,rz);scene.add(m);return m}
+const R=(a,b)=>a+Math.random()*(b-a),FL=-Math.PI/2;
+for(let i=0;i<14;i++)decal("stain",R(.8,2),R(.8,2),R(-3.5,3.5),.02,R(-3.5,3.5),FL,0,R(0,6));
+for(let i=0;i<14;i++)decal("stain",R(.8,2.2),R(.8,2.2),R(-10,10),.02,R(-10,-5),FL,0,R(0,6));
+for(let i=0;i<26;i++)decal("stain",R(.8,2.2),R(.8,2.2),R(-2.6,2.6),.02,R(-44,-11),FL,0,R(0,6));
+for(let i=0;i<14;i++){const l=i%2;decal("stain",R(.8,2),R(.6,1.4),l?2.98:-2.98,R(.2,1.2),R(-44,-11),0,l?-Math.PI/2:Math.PI/2,0)}
+for(let i=0;i<8;i++){const l=i%2;decal("crack",R(.3,.6),R(.8,1.4),l?2.98:-2.98,R(1,2),R(-44,-11),0,l?-Math.PI/2:Math.PI/2,0)}
+for(let i=0;i<6;i++)decal("crack",R(.3,.6),R(.8,1.4),R(-3.6,3.6),R(1,2),3.98,0,Math.PI,0);
+for(let i=0;i<6;i++)decal("stain",R(.8,1.8),R(.6,1.2),R(-3.6,3.6),R(.2,1),3.98,0,Math.PI,0);
+[[-3.96,2.55,3.55,Math.PI/2],[3.96,2.55,3.55,-Math.PI/2],[-3.96,2.55,-3.55,Math.PI/2],[3.96,2.55,-3.55,-Math.PI/2],[-2.97,2.5,-11.5,Math.PI/2],[2.97,2.5,-11.5,-Math.PI/2],[-2.97,2.5,-44.5,Math.PI/2],[2.97,2.5,-44.5,-Math.PI/2]].forEach(([x,y,z,ry])=>decal("web",1,1,x,y,z,0,ry,0));
+// Office clutter: chair, bin, papers, mug
+const darkM=mat(0x1c1c1c);slab(.4,.45,-1.2,.7,.1,.7,darkM);slab(.4,.85,-.88,.7,.8,.08,darkM);slab(.4,.22,-1.2,.08,.45,.08,darkM);
+const bin=new G.Mesh(new G.CylinderGeometry(.22,.18,.5,16),mat(0x2a2f2c));bin.position.set(-3.4,.25,2.6);scene.add(bin);
+for(let i=0;i<7;i++){const p=new G.Mesh(new G.BoxGeometry(.28,.004,.2),mat(0xd8d4c4));p.position.set(R(-1.4,.8),.905,R(-2.7,-2.1));p.rotation.y=R(0,3);scene.add(p)}
+const mug=new G.Mesh(new G.CylinderGeometry(.05,.05,.1,14),mat(0x8a2a2a));mug.position.set(-.8,.95,-2.3);scene.add(mug);
+// Pipes and light fixtures along the long hall
+[-2.6,2.6].forEach(x=>{const p=new G.Mesh(new G.CylinderGeometry(.08,.08,34,12),metal);p.rotation.x=Math.PI/2;p.position.set(x,2.85,-27.75);scene.add(p)});
+for(let i=0;i<6;i++)slab(0,2.98,-14-i*5.6,.9,.05,.25,mat(0x222222,0x6a7a66));
+// Old posters and signs
+function poster(t,x,y,z,ry,w,h){const m=new G.Mesh(new G.PlaneGeometry(w,h),new G.MeshBasicMaterial({map:labelTex(t,"#d9d3bf","#9a2020"),color:0x9a9a9a}));m.position.set(x,y,z);m.rotation.y=ry;scene.add(m)}
+poster("AARAV'S|PIZZERIA",0,2.2,3.97,Math.PI,1.5,.55);poster("WASH YOUR|HANDS",-2.3,1.5,3.97,Math.PI,.8,.3);poster("EMPLOYEES|ONLY",-3.97,1.6,1.5,Math.PI/2,.8,.3);
+[-13,-22.5,-33.5,-42].forEach((z,i)=>{poster(i%2?"NO|RUNNING":"CLEAN UP|AFTER PARTY",-2.97,1.7,z,Math.PI/2,.8,.3);poster(i%2?"SMILE!":"NO|PETS",2.97,1.7,z,-Math.PI/2,.8,.3)});
+// More dust drifting through the corridor and long hall
+{const n=600,a=new Float32Array(n*3);for(let i=0;i<n;i++){const r=Math.random()<.35;a[i*3]=r?(Math.random()-.5)*20:(Math.random()-.5)*6;a[i*3+1]=Math.random()*2.9;a[i*3+2]=r?-5-Math.random()*5.5:-11-Math.random()*33}
+ const g=new G.BufferGeometry();g.setAttribute("position",new G.BufferAttribute(a,3));window.dust2=new G.Points(g,new G.PointsMaterial({color:0xb5c2b0,size:.035,transparent:true,opacity:.35}));scene.add(window.dust2)}
 // Floating dust
-const dp=new Float32Array(240);for(let i=0;i<80;i++){dp[i*3]=(Math.random()-.5)*8;dp[i*3+1]=Math.random()*3;dp[i*3+2]=(Math.random()-.5)*8}
+const dp=new Float32Array(720);for(let i=0;i<240;i++){dp[i*3]=(Math.random()-.5)*8;dp[i*3+1]=Math.random()*3;dp[i*3+2]=(Math.random()-.5)*8}
 const dg=new G.BufferGeometry();dg.setAttribute("position",new G.BufferAttribute(dp,3));
 const dust=new G.Points(dg,new G.PointsMaterial({color:0xa8b8a8,size:.03,transparent:true,opacity:.45}));scene.add(dust);
 
@@ -306,14 +348,14 @@ const ventMon=spawnMon("gri","The Grinner",0),smileMon=spawnMon("smi","Sunny",2.
 // ---------- Scrambled layout ----------
 const ROOMS=["stage","dining","closet","kitchen","arcade","play"],NAMES={stage:"STAGE",dining:"DINING HALL",closet:"SUPPLY CLOSET",kitchen:"KITCHEN",arcade:"ARCADE",play:"PLAY ROOM"};
 const RP={};const at=(n,lx,lz)=>{const r=RP[n];return[r.cx+lx*r.fx,r.cz+lz]};
-let got={play:false,closet:false,exit:false};
+let got={play:false,closet:false,exit:false},savedGot=null;
 const CAMS={stage:null,dining:null,closet:null,kitchen:null,arcade:null,play:null,cove:["Pirate's Cove",[-5.5,2.4,-5],[-10,1.2,-7.5]],lhall:["Left Hall",[-8,2.4,-5.5],[-1.6,1,-8]],rhall:["Right Hall",[8,2.4,-5.5],[1.6,1,-8]]};
 function layout(){
   const idx=[0,1,2,3,4,5];for(let i=5;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
   ROOMS.forEach((n,i)=>{const s=SLOT[idx[i]],fx=s.x>0?1:-1;RP[n]={cx:s.x,cz:s.z,fx,slot:idx[i]};DEC[n].position.set(s.x,0,s.z);DEC[n].scale.x=fx;setSign(idx[i],NAMES[n]);
     const p=at(n,-5.2,-3.8),t=at(n,2.5,0);CAMS[n]=[NAMES[n].toLowerCase().replace(/(^|\s)\w/g,c=>c.toUpperCase()),[p[0],2.5,p[1]],[t[0],.9,t[1]]]});
   lockDoors.forEach((d,i)=>d.userData.closed=(i==RP.closet.slot));
-  got={play:false,closet:false,exit:false};playKey.visible=true;exitKey.visible=true}
+  playKey.visible=!got.play;exitKey.visible=!got.exit}
 const SPOT={stage:(o)=>{const p=at("stage",3.3,-1.5+o*.8);return[p[0],.6,p[1]]},dining:(o,i)=>{const p=at("dining",o*1.2,-.5+(i%2)*1.5);return[p[0],0,p[1]]},
  closet:(o)=>{const p=at("closet",2.5+o*.4,0);return[p[0],0,p[1]]},kitchen:(o)=>{const p=at("kitchen",o*.8,2);return[p[0],0,p[1]]},arcade:(o)=>{const p=at("arcade",2+o*.5,0);return[p[0],0,p[1]]},
  lhall:()=>[-1.6,0,-8],rhall:()=>[1.6,0,-8],ldoor:()=>[-2.6,0,-5.4],rdoor:()=>[2.6,0,-5.4],wdoor:()=>[0,0,-4.9],whall:()=>[0,0,-8.5],gone:()=>[0,-50,0]};
@@ -360,6 +402,7 @@ let jour={};try{jour=JSON.parse(localStorage.getItem("aarav-journal"))||{}}catch
 function entry(id){if(jour[id])return;jour[id]=1;try{localStorage.setItem("aarav-journal",JSON.stringify(jour))}catch(e){}note("Journal: "+MON.find(m=>m[0]==id)[1]+" added")}
 
 // ---------- Game state ----------
+let exploreOnly=false;
 const HOUR_SECS=60,NIGHT_LEN=HOUR_SECS*6,TAX=[10,12,14,16,18],DIFF={easy:.7,normal:1,hard:1.4};
 let night=1,unlocked=1,tick=0,power=100,door={L:0,R:0},wl=0,sh=0,ht=0,camOpen=false,curCam="dining",mons=[],running=false,timer=null,outT=null,js=null,
  vent={s:"idle",cd:0,t:0,heat:0},smile={s:"gone",t:0,w:0,c:0},playDead=false,forced=false,alarm={on:false,t:0,used:false},debris=[],nextBeat=0,nextSiren=0,shake=0,
@@ -375,11 +418,11 @@ const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const hideAll=()=>["menu","dead","win","card","achov","monov","settings","cpanel","talk"].forEach(i=>$(i).classList.remove("show"));
 function pauseOn(){if((running||escapeOn)&&!paused){paused=true;pauseAt=performance.now()}}
 function pauseOff(){if(paused){paused=false;const d=performance.now()-pauseAt;mons.forEach(m=>m.deadline+=d);bb.at+=d;nextBeat+=d;nextSiren+=d;nextPsst+=d;nextStomp+=d}}
-function menu(){running=false;escapeOn=false;js=null;paused=false;clearInterval(timer);hideAll();setCam(false);camera.position.set(0,1.6,0);
+function menu(){if(exploreOnly&&savedGot){got=savedGot;savedGot=null}exploreOnly=false;running=false;escapeOn=false;js=null;paused=false;clearInterval(timer);hideAll();setCam(false);camera.position.set(0,1.6,0);
   [ventMon,smileMon,swMon,coveMon,bbMon].forEach(o=>{o.mesh.visible=false;o.mesh.scale.setScalar(1)});$("flash").classList.remove("go");$("obj").style.display="none";$("prompt").style.display="none";$("redfx").style.opacity=0;$("alarmfx").style.opacity=0;
   $("play").textContent=unlocked>1?"CONTINUE: Night "+unlocked:"NEW GAME";$("newbtn").style.display=unlocked>1?"":"none";$("menu").classList.add("show")}
 function begin(n){
-  initAudio();night=endless?3:n;tick=0;power=100;door={L:0,R:0};wl=sh=ht=0;outT=null;js=null;forced=false;playDead=false;shake=0;paused=false;escapeOn=false;hp=100;
+  initAudio();exploreOnly=false;night=endless?3:n;P={x:0,z:0,yaw:0,pitch:0};look.kp=0;if(n==1&&!endless)got={play:false,closet:false,exit:false};tick=0;power=100;door={L:0,R:0};wl=sh=ht=0;outT=null;js=null;forced=false;playDead=false;shake=0;paused=false;escapeOn=false;hp=100;
   vent={s:"idle",cd:0,t:0,heat:0};smile={s:"gone",t:0,w:0,c:0};alarm={on:false,t:0,used:false};bb={s:"gone",at:0};sw={s:"gone",t:0,y:1.5};cove={s:"closed",cd:20,t:0,D:5};
   [ventMon,smileMon,swMon,coveMon,bbMon].forEach(o=>{o.mesh.visible=false;o.mesh.scale.setScalar(1)});$("flash").classList.remove("go");
   layout();$("comp").style.display="none";$("obj").style.display="none";$("prompt").style.display="none";setCam(false);
@@ -401,7 +444,7 @@ function step(){
   else if(smile.s=="here"&&!(camOpen&&curCam=="play")&&++smile.t>=30){smile.s="gone";unlock("sunny");entry("smi")}
   if(en.bb&&tick>0&&tick%HOUR_SECS==0&&bb.s=="gone"){bb.s="door";bb.at=performance.now()+5000;sfx.squeak()}
   if(en.cap&&cove.s=="closed"&&tick>=20&&--cove.cd<=0){cove.cd=18+Math.random()*14;if(Math.random()<(.35+.05*night)*dm()){cove.s="laugh";cove.t=0;sfx.har()}}
-  if(en.sw&&tick%Math.round(HOUR_SECS/2)==0&&sw.s=="gone"&&Math.random()<.4){const a=(Math.random()-.5)*1.8;sw.s="here";sw.t=0;sw.y=1.2+Math.random()*.9;swMon.mesh.position.set(-Math.sin(a)*2.2,sw.y,-Math.cos(a)*2.2);sfx.psst();nextPsst=performance.now()+900}
+  if(en.sw&&tick%Math.round(HOUR_SECS/2)==0&&sw.s=="gone"&&Math.random()<.4){const a=P.yaw+(Math.random()-.5)*1.8;sw.s="here";sw.t=0;sw.y=1.2+Math.random()*.9;swMon.mesh.position.set(P.x-Math.sin(a)*2.2,sw.y,P.z-Math.cos(a)*2.2);sfx.psst();nextPsst=performance.now()+900}
   for(const m of mons){
     if(m.banned||/door/.test(m.room))continue;
     m.cd-=f;if(m.cd>0)continue;
@@ -417,9 +460,9 @@ function step(){
   if(!endless&&tick>=NIGHT_LEN)return win();
   ui()}
 function kill(m){
-  running=false;escapeOn=false;clearInterval(timer);forced=false;$("comp").style.display="none";$("obj").style.display="none";$("prompt").style.display="none";setCam(false);wl=0;unlock("die");if(alarm.on)unlock("iq");if(m===smileMon)unlock("stare");alarm.on=false;if(!endless)resetSave();ui();
+  running=false;escapeOn=false;clearInterval(timer);forced=false;$("comp").style.display="none";$("obj").style.display="none";$("prompt").style.display="none";setCam(false);wl=0;unlock("die");if(alarm.on)unlock("iq");if(m===smileMon)unlock("stare");alarm.on=false;if(!endless&&!exploreOnly)resetSave();ui();
   js={m,t:0,from:m.mesh.position.clone()};m.mesh.visible=true;
-  $("deadt").textContent=m.name+" got you."+(endless?"":" Your save was reset.");$("flash").classList.remove("go");void $("flash").offsetWidth;$("flash").classList.add("go");
+  $("deadt").textContent=m.name+" got you."+(endless||exploreOnly?"":" Your save was reset.");$("retry").textContent=exploreOnly?"Try again":"New game";$("flash").classList.remove("go");void $("flash").offsetWidth;$("flash").classList.add("go");
   if(m===ventMon){ventG.visible=false;sfx.boom();
     for(let i=0;i<18;i++){const b=new G.Mesh(box(.12,.12,.04),new G.MeshBasicMaterial({color:i%2?0x2a2e2b:0x6a726c}));b.position.set((Math.random()-.5)*1.1,2.6+(Math.random()-.5)*.4,-3.9);scene.add(b);
       debris.push({m:b,v:new G.Vector3((Math.random()-.5)*5,Math.random()*4,Math.random()*6)})}}
@@ -432,26 +475,26 @@ function win(){
   $("next").textContent=night<5?"Next night":"Look for the exit";$("next").style.display="";$("win").classList.add("show")}
 // ---------- Escape phase (after Night 5): walk the scrambled pizzeria ----------
 function setObj(){$("obj").textContent=!got.play?"Find the supply closet key. It's in the Play Room.":!got.closet?"Unlock the Supply Closet.":!got.exit?"Find the exit key inside the Supply Closet.":"Take the exit key to the entrance by the Stage.";$("obj").style.display="block"}
-function beginEscape(){hideAll();escapeOn=true;running=false;clearInterval(timer);setCam(false);door={L:0,R:0};wl=sh=ht=0;alarm.on=false;paused=false;
-  smile={s:"gone",t:0,w:0,c:0};[bbMon,swMon,coveMon,ventMon].forEach(o=>o.mesh.visible=false);got={play:false,closet:false,exit:false};playKey.visible=true;exitKey.visible=true;
+function beginEscape(practice){exploreOnly=!!practice;js=null;hideAll();escapeOn=true;running=false;clearInterval(timer);setCam(false);door={L:0,R:0};wl=sh=ht=0;alarm.on=false;paused=false;
+  smile={s:"gone",t:0,w:0,c:0};[bbMon,swMon,coveMon,ventMon].forEach(o=>o.mesh.visible=false);if(practice){if(!savedGot)savedGot=got;got={play:false,closet:false,exit:false}}playKey.visible=!got.play;exitKey.visible=!got.exit;
   P={x:0,z:0,yaw:0,pitch:0};ESC={awake:false,beat:0};smileMon.mesh.scale.setScalar(1);smileMon.mesh.visible=false;setObj();ui();note("Walk: WASD. Turn: arrow keys, drag or mouse. Interact: E or click.")}
-function escapeWin(){escapeOn=false;$("obj").style.display="none";$("prompt").style.display="none";unlock("escape");resetSave();smileMon.mesh.visible=false;
-  $("wint1").textContent="You escaped!";$("wint").textContent="You made it out of Aarav's Pizzeria. Sunny stays behind, smiling.";$("next").style.display="none";$("win").classList.add("show");sfx.key()}
+function escapeWin(){escapeOn=false;$("obj").style.display="none";$("prompt").style.display="none";if(!exploreOnly){unlock("escape");resetSave()}smileMon.mesh.visible=false;
+  $("wint1").textContent="You escaped!";$("wint").textContent=exploreOnly?"Practice run complete. You found both keys and the way out.":"You made it out of Aarav's Pizzeria. Sunny stays behind, smiling.";$("next").style.display="none";$("win").classList.add("show");sfx.key()}
 function target(){const pk=at("play",5,3.3),cd=[RP.closet.cx>0?3.25:-3.25,RP.closet.cz],ek=at("closet",4.5,0),ed=at("stage",5.55,3.2),d=p=>Math.hypot(P.x-p[0],P.z-p[1]);
   if(!got.play&&d(pk)<1.8)return{t:"play",msg:"E: take the supply closet key"};
   if(got.play&&!got.closet&&d(cd)<2.5)return{t:"closet",msg:"E: unlock the supply closet"};
   if(got.closet&&!got.exit&&d(ek)<1.8)return{t:"exit",msg:"E: take the exit key"};
-  if(d(ed)<2.5)return{t:"door",msg:got.exit?"E: unlock the entrance and escape":"The entrance is locked. Find the exit key."};
+  if(d(ed)<2.5)return{t:"door",msg:got.exit?(escapeOn?"E: unlock the entrance and escape":"The entrance opens after your shift ends (Night 5)."):"The entrance is locked. Find the exit key."};
   return null}
 function interact(){const t=target();if(!t)return;
   if(t.t=="play"){got.play=true;playKey.visible=false;sfx.key();note("Got the supply closet key");setObj()}
   else if(t.t=="closet"){got.closet=true;sfx.door();note("Supply Closet unlocked");setObj()}
   else if(t.t=="exit"){got.exit=true;exitKey.visible=false;sfx.key();note("Got the exit key");setObj()}
-  else if(t.t=="door"){if(got.exit)escapeWin();else note("Locked. You need the exit key.")}}
+  else if(t.t=="door"){if(got.exit&&escapeOn)escapeWin();else if(got.exit)note("The entrance opens when your shift ends after Night 5.");else note("Locked. You need the exit key.")}}
 function blocked(x,z){const r=.3;for(const s of solids){const g=s.g,m=s.m,wx=g?g.position.x+m.position.x*g.scale.x:m.position.x,wz=g?g.position.z+m.position.z:m.position.z,wy=m.position.y;
     if(wy-s.hh>2||wy+s.hh<.2)continue;if(Math.abs(x-wx)<s.hw+r&&Math.abs(z-wz)<s.hd+r)return true}return false}
 function setCam(on){camOpen=on;$("camui").style.display=on?"flex":"none";$("camfx").style.display=on?"block":"none";$("rec").style.display=on?"block":"none";
-  if(on){camera.position.set(...CAMS[curCam][1]);camera.lookAt(...CAMS[curCam][2])}else camera.position.set(0,1.6,0)}
+  if(on){camera.position.set(...CAMS[curCam][1]);camera.lookAt(...CAMS[curCam][2])}else camera.position.set(P.x,1.6,P.z)}
 function ui(){
   $("clk").textContent=clockText();$("pw").textContent=Math.ceil(power);$("pw").classList.toggle("low",power<20);$("hp").textContent=hp;$("hp").classList.toggle("low",hp<=50);
   $("use").textContent=escapeOn?"":"Use "+"▮".repeat(usage())+(alarm.on?"  ALARM "+alarm.t+"s":"");
@@ -464,7 +507,8 @@ function press(k){if(!can())return;act[k]();
   sfx.door();ui()}
 function startAlarm(note_){alarm.used=alarm.on=true;alarm.t=30;sfx.siren();if(note_)note(note_);ui()}
 function alarmStart(){if(!can()||alarm.used)return;startAlarm()}
-function openCams(){if(!running||power<=0||forced||paused)return;wl=0;setCam(true);ui()}
+const inOffice=()=>Math.abs(P.x)<3.9&&P.z>-3.9&&P.z<3.9;
+function openCams(){if(!running||power<=0||forced||paused)return;if(!inOffice()){note("Go back to the office to use the cameras.");return}wl=0;setCam(true);ui()}
 // Bobbin asks nicely. Yes costs battery, No makes him pull the fire alarm.
 function askBob(){bb.s="ask";pauseOn();const pct=TAX[clamp(night,1,5)-1];
   $("talkt").textContent="Bobbin";$("talkp").textContent="\"Hi there! Can I please have some of your battery? Just "+pct+"%. Pleeease?\"";
@@ -475,8 +519,9 @@ function askBob(){bb.s="ask";pauseOn();const pct=TAX[clamp(night,1,5)-1];
   $("talk").classList.add("show")}
 $("camclose").onclick=()=>{setCam(false);ui()};
 $("camrow").onclick=e=>{const c=e.target.dataset.c;if(c&&!(c=="play"&&playDead)){curCam=c;setCam(true);ui()}};
-$("play").onclick=()=>begin(unlocked);$("newbtn").onclick=()=>{resetSave();begin(1)};$("retry").onclick=()=>{if(!endless)resetSave();begin(endless?3:1)};$("deadmenu").onclick=menu;
+$("play").onclick=()=>begin(unlocked);$("newbtn").onclick=()=>{resetSave();begin(1)};$("retry").onclick=()=>{if(exploreOnly){layout();beginEscape(true);return}if(!endless)resetSave();begin(endless?3:1)};$("deadmenu").onclick=menu;
 $("next").onclick=()=>{if(night<5)begin(night+1);else beginEscape()};$("tomenu").onclick=menu;
+$("expbtn").onclick=()=>{initAudio();layout();beginEscape(true)};
 
 // ---------- Achievements / Monsters / Settings / Control Panel ----------
 function showAch(){$("achc").textContent=Object.keys(ach).length+" of "+ACH.length+" unlocked";
@@ -491,6 +536,7 @@ $("monback").onclick=()=>{$("monov").classList.remove("show");if(monFrom=="menu"
 function openSettings(){pauseOn();$("settings").classList.add("show");if($("menu").classList.contains("show"))$("menu").classList.remove("show"),openSettings.fromMenu=true;else openSettings.fromMenu=false}
 $("setbtn").onclick=openSettings;$("gear").onclick=openSettings;
 $("stback").onclick=()=>{$("settings").classList.remove("show");pauseOff();if(openSettings.fromMenu)$("menu").classList.add("show")};
+$("stquit").onclick=()=>{paused=false;$("settings").classList.remove("show");menu()};
 $("stvol").oninput=e=>{vol=e.target.value/100;drones.forEach(g=>g.gain.value=.05*vol)};
 $("stbri").oninput=e=>{renderer.toneMappingExposure=e.target.value/100};
 $("stsens").oninput=e=>{sens=e.target.value/100};
@@ -507,22 +553,24 @@ $("cpreset").onclick=()=>{resetSave();note("Save reset. Your next game starts at
 // ---------- Input ----------
 let yaw=0,yawT=0,pitch=0,pitchT=0,drag=null;
 const cv=renderer.domElement;
+const look={mx:.5,my:.5,mouse:false,touch:false,kp:0};
 cv.addEventListener("pointermove",e=>{
-  if(escapeOn){if(e.pointerType=="mouse"&&e.buttons&1){P.yaw-=e.movementX*.005*sens;P.pitch=clamp(P.pitch-e.movementY*.005*sens,-.9,.9)}else if(e.pointerType!="mouse"&&drag){P.yaw+=(e.clientX-drag.x)*.008*sens;P.pitch=clamp(P.pitch-(e.clientY-drag.y)*.005*sens,-.9,.9);drag={x:e.clientX,y:e.clientY}}return}
-  if(e.pointerType=="mouse"){yawT=-(e.clientX/innerWidth*2-1)*1;pitchT=(.5-e.clientY/innerHeight)*.6}
-  else if(drag){yawT=clamp(yawT+(e.clientX-drag.x)*.008*sens,-1,1);pitchT=clamp(pitchT-(e.clientY-drag.y)*.004*sens,-.3,.3);drag={x:e.clientX,y:e.clientY}}});
+  if(e.pointerType=="mouse"){look.mouse=true;look.touch=false;look.mx=e.clientX/innerWidth;look.my=e.clientY/innerHeight;if(e.buttons&1&&(running||escapeOn)){P.yaw-=e.movementX*.005*sens;look.kp=clamp(look.kp-e.movementY*.005*sens,-.6,.6)}}
+  else if(drag){look.touch=true;P.yaw+=(e.clientX-drag.x)*.008*sens;look.kp=clamp(look.kp-(e.clientY-drag.y)*.005*sens,-.6,.6);drag={x:e.clientX,y:e.clientY}}});
 cv.addEventListener("pointerdown",e=>{if(e.pointerType!="mouse")drag={x:e.clientX,y:e.clientY}});
 addEventListener("pointerup",()=>drag=null);
-cv.addEventListener("wheel",e=>{e.preventDefault();if(escapeOn){P.yaw-=e.deltaX*.003*sens;P.pitch=clamp(P.pitch-e.deltaY*.003*sens,-.9,.9)}else{yawT=clamp(yawT-e.deltaX*.003*sens,-1,1);pitchT=clamp(pitchT-e.deltaY*.003*sens,-.3,.3)}},{passive:false});
+cv.addEventListener("wheel",e=>{e.preventDefault();P.yaw-=e.deltaX*.003*sens;look.kp=clamp(look.kp-e.deltaY*.003*sens,-.6,.6)},{passive:false});
 const ray=new G.Raycaster(),mv=new G.Vector2();
 function pick(e){const r=cv.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(mv,camera);const h=ray.intersectObjects(clickables,false)[0];return h&&h.object.userData.key}
-cv.addEventListener("click",e=>{if(paused||js)return;if(escapeOn){interact();return}if(!running||camOpen||forced)return;const k=pick(e);if(!k)return;if(k=="cam")openCams();else if(k=="fa")alarmStart();else press(k)});
+cv.addEventListener("click",e=>{if(paused||js)return;if(escapeOn){interact();return}if(!running||camOpen||forced)return;const k=pick(e);if(!k){interact();return}if(!inOffice()){note("Too far away. Get back to the office.");return}if(k=="cam")openCams();else if(k=="fa")alarmStart();else press(k)});
 cv.addEventListener("pointermove",e=>{cv.style.cursor=(running&&!camOpen&&!forced&&!js&&!paused&&!escapeOn&&pick(e))?"pointer":"default"});
 const keys={};
 addEventListener("keydown",e=>{const k=e.key.toLowerCase();keys[k]=1;
   if(e.ctrlKey&&k=="c"){e.preventDefault();togglePanel();return}
   if(k=="escape"&&camOpen)$("camclose").click();
-  if(k=="e"&&escapeOn&&!paused)interact()});
+  if(k==" "){e.preventDefault();if(running&&!paused){camOpen?$("camclose").click():openCams()}}
+  if(/^[1-9]$/.test(k)&&camOpen){const c=Object.keys(CAMS)[+k-1];if(c&&!(c=="play"&&playDead)){curCam=c;setCam(true);ui()}}
+  if(k=="e"&&(escapeOn||running)&&!paused&&!camOpen&&!forced&&!js)interact()});
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=0);
 
 // ---------- Render loop ----------
@@ -532,23 +580,31 @@ function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;const nowMs=performance.now();
   if(paused){renderer.render(scene,camera);return}
   const K=keys;
-  if(escapeOn&&!js){
-    P.yaw+=((K.arrowleft?1:0)-(K.arrowright?1:0))*dt*1.8*sens;P.pitch=clamp(P.pitch+((K.arrowup?1:0)-(K.arrowdown?1:0))*dt*1.2*sens,-.9,.9);
+  const walking=(escapeOn||running)&&!js&&!camOpen&&!forced;
+  if(walking){
+    if(look.mouse&&!look.touch){const ed=look.mx<.08?(.08-look.mx)/.08:look.mx>.92?-(look.mx-.92)/.08:0;P.yaw+=ed*dt*2*sens}
+    P.yaw+=((K.arrowleft?1:0)-(K.arrowright?1:0))*dt*1.8*sens;look.kp=clamp(look.kp+((K.arrowup?1:0)-(K.arrowdown?1:0))*dt*1.2*sens,-.6,.6);
+    const mp=look.mouse&&!look.touch?clamp((.5-look.my)*.7,-.35,.35):0;P.pitch+=(clamp(mp+look.kp,-.9,.9)-P.pitch)*.2;
     const fwd=(K.w?1:0)-(K.s?1:0),str=(K.d?1:0)-(K.a?1:0),sp=3.1*dt,dx=(-Math.sin(P.yaw)*fwd+Math.cos(P.yaw)*str)*sp,dz=(-Math.cos(P.yaw)*fwd-Math.sin(P.yaw)*str)*sp;
     if(!blocked(P.x+dx,P.z))P.x+=dx;if(!blocked(P.x,P.z+dz))P.z+=dz;
-    camera.position.set(P.x,1.6,P.z);camera.rotation.set(P.pitch,P.yaw,0);
+    // Walked up to a shut door from outside? It opens, so you can't lock yourself out.
+    if(running)for(const sd of["L","R"]){const cx=sd=="L"?-2.6:2.6;if(door[sd]&&Math.abs(P.x-cx)<1&&P.z<-4.4&&P.z>-6.5){door[sd]=0;sfx.door();note("You opened the door");ui()}}
+    camera.position.set(P.x+(shake>0?(Math.random()-.5)*.15:0),1.6,P.z);camera.rotation.set(P.pitch,P.yaw,0);
     const t=target();$("prompt").style.display=t?"block":"none";if(t)$("prompt").textContent=t.msg;
   }else{
-    yawT=clamp(yawT+(((K.arrowleft||K.a)?1:0)-((K.arrowright||K.d)?1:0))*dt*2*sens,-1,1);pitchT=clamp(pitchT+(((K.arrowup||K.w)?1:0)-((K.arrowdown||K.s)?1:0))*dt*1.2*sens,-.3,.3);
-    if(!running&&!js){yawT=Math.sin(now/3500)*.4;pitchT=.1}
-    yaw+=(yawT-yaw)*.1;pitch+=(pitchT-pitch)*.1;
-    if(forced&&!js){camera.position.set(.9,1.5,-1.2);camera.lookAt(1.3,1.1,-2.5)}
-    else if(!camOpen&&!js){camera.position.set(shake>0?(Math.random()-.5)*.15:0,1.6,0);camera.rotation.set(pitch,yaw,0)}
+    if(!running&&!escapeOn&&!js){camera.position.set(0,1.6,0);camera.rotation.set(.1,Math.sin(now/3500)*.4,0);$("prompt").style.display="none"}
+    else if(forced&&!js){camera.position.set(.9,1.5,-1.2);camera.lookAt(1.3,1.1,-2.5)}
+    if(camOpen)$("prompt").style.display="none";
   }
+  // Touching a monster that is standing in a room is fatal
+  if(running&&!js){const hit=o=>Math.hypot(P.x-o.mesh.position.x,P.z-o.mesh.position.z)<.95;
+    for(const m of mons){if(!m.banned&&m.room!="gone"&&hit(m)){kill(m);break}}
+    if(!js&&smile.s=="here"&&hit(smileMon))kill(smileMon);
+    if(!js&&cove.s!="closed"&&hit(coveMon))kill(coveMon)}
   if(shake>0)shake-=dt;
   camLight.intensity=camOpen?1.5:(escapeOn?1:0);if(camOpen||escapeOn)camLight.position.copy(camera.position);
   const flick=Math.random()<.025;
-  lamp.intensity=power<=0?0:(1-(flick?.75:0)-night*.02);tubeLight.material.emissiveIntensity=power<=0?0:(flick?.2:1);
+  const out=running&&power<=0;lamp.intensity=out?.3:(1.2-(flick?.9:0)-night*.02);amb.intensity=out?.55:.8;tubeLight.material.emissiveIntensity=out?.05:(flick?.2:1);
   winLight.intensity=wl?2.4:0;ventMat.emissive.set(ht?0xaa3300:0);
   btnMeshes.L.material.emissive.set(door.L?0xff2200:0x220000);btnMeshes.R.material.emissive.set(door.R?0xff2200:0x220000);btnMeshes.sh.material.emissive.set(sh?0xff2200:0x220000);
   btnMeshes.wl.material.emissive.set(wl?0xffaa22:0x221800);btnMeshes.ht.material.emissive.set(ht?0xff6a00:0x221000);
@@ -558,7 +614,7 @@ function frame(now){
   shutter.position.y+=((sh?1.6:2.9)-shutter.position.y)*.2;
   lockDoors.forEach(d=>{const t=(d.userData.closed&&!got.closet)?1.2:4.2;d.position.y+=(t-d.position.y)*.15});
   playKey.rotation.y+=dt*2;exitKey.rotation.y+=dt*2;
-  dust.rotation.y+=dt*.02;dust.position.y=Math.sin(now/4000)*.1;
+  dust.rotation.y+=dt*.02;dust.position.y=Math.sin(now/4000)*.1;window.dust2.position.y=Math.sin(now/5000)*.12;
   const al=alarm.on&&running;
   $("alarmfx").style.opacity=al?(Math.sin(now/130)>0?.9:.25):0;alarmLight.intensity=al?(Math.sin(now/130)>0?2.2:.2):0;
   if(al&&now>=nextSiren){sfx.siren();nextSiren=now+800}
@@ -626,7 +682,7 @@ function frame(now){
     const tgt=new G.Vector3(camera.position.x+d.x*1.5,1.6-js.m.fy*sc*(js.m.zoom||1),camera.position.z+d.z*1.5);
     m.position.copy(js.from).lerp(tgt,k);m.position.x+=(Math.random()-.5)*.1*k;m.position.y+=(Math.random()-.5)*.1*k;
     m.scale.setScalar(1+(sc*(js.m.zoom||1)-1)*k);m.rotation.set(0,Math.atan2(-d.x,-d.z),(Math.random()-.5)*.2*k);
-    camera.position.set((Math.random()-.5)*.08,1.6+(Math.random()-.5)*.08,0);
+    camera.position.set(P.x+(Math.random()-.5)*.08,1.6+(Math.random()-.5)*.08,P.z);
     debris.forEach(b=>{b.v.y-=9*dt;b.m.position.addScaledVector(b.v,dt);b.m.rotation.x+=dt*6});
     if(js.t>1.7)$("dead").classList.add("show");
   }else mons.forEach(m=>m.mesh.scale.setScalar(1));
