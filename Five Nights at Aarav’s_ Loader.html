@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Five Nights at Aarav’s: Loader</title>
+<style>
+:root{--bg:#f4f1ea;--fg:#1d1b17;--mut:#6b655a;--card:#fffdf8;--bd:#d8d2c4;--acc:#b3261a;--accfg:#fff;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1210;--fg:#e8f1e6;--mut:#a3baa9;--card:#141c18;--bd:#2f4337;--acc:#e8b04f;--accfg:#1a1405}}
+:root[data-theme="dark"]{--bg:#0d1210;--fg:#e8f1e6;--mut:#a3baa9;--card:#141c18;--bd:#2f4337;--acc:#e8b04f;--accfg:#1a1405}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{display:flex;flex-direction:column}
+.bar{display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.bar span{color:var(--mut);font-size:14px;margin-right:auto}
+button,label.btn{font:inherit;font-weight:600;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;padding:8px 14px;cursor:pointer}
+button.p,label.btn.p{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+button:focus-visible,label.btn:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+#home{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.card{max-width:520px;width:100%;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:24px;text-align:center}
+.card h1{margin:0 0 6px;font-size:26px}
+.card p{margin:8px 0;color:var(--mut)}
+.drop{margin:18px 0;padding:26px 14px;border:2px dashed var(--bd);border-radius:12px}
+.drop.over{border-color:var(--acc)}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#log{text-align:left;font-size:14px;color:var(--mut);margin-top:14px}
+#log div{padding:2px 0}
+#err{color:var(--acc);font-weight:600}
+.acct{margin-top:16px;padding:12px;border:1px solid var(--bd);border-radius:10px;font-size:14px;color:var(--mut)}
+.acct .row{margin-top:10px}
+#game{display:none;flex:1;width:100%;border:0;background:#000}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"><span id="stat">Game loaded</span>
+<button id="bake" class="p" style="display:none">Save game into this page</button><button id="dl" style="display:none">Download patched copy</button><button id="full">Fullscreen</button><label class="btn">Import another<input type="file" id="f2" accept=".html,.htm,text/html"></label><button id="home2">Close game</button></div>
+
+<div id="home"><div class="card">
+<h1>Five Nights at Aarav’s Pizzeria</h1>
+<p id="hometxt">Import your game’s HTML file to play it here. The sound fixes are applied automatically as it loads.</p>
+<div class="row"><button class="p" id="playemb" style="display:none;font-size:20px;padding:12px 30px">Play</button></div>
+<div class="drop" id="drop"><p style="margin:0 0 12px">Drop the .html file here, or choose it</p>
+<label class="btn p">Import game file<input type="file" id="f" accept=".html,.htm,text/html"></label></div>
+<div class="row"><button id="last" style="display:none">Load last imported copy</button></div>
+<div id="err"></div><div id="log"></div>
+<div class="acct"><div id="who">Not logged in. Progress is saved only in this browser.</div><div class="row"><button class="p" id="login">Log in to save online</button><button id="logout" style="display:none">Log out</button></div></div>
+<p style="font-size:13px">Your file stays in this browser. Saves and settings from the game are kept by the browser too.</p>
+</div></div>
+<iframe id="game" title="Game" allow="autoplay; fullscreen; gamepad" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-modals"></iframe>
+
+<script type="application/json" id="emb"></script>
+<script>
+const PRISTINE="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
+const $=id=>document.getElementById(id),KEY="aarav-game-html";
+let patched="",dls=null,art=null,embText="",srcText="";
+function patch(src){
+  let s=src;const log=[];
+  if(/function route\(n,to,dest\)/.test(s)){
+    s=s.replace(/function route\(n,to,dest\)/,"function npcRoute(n,to,dest)");
+    const c=(s.match(/n\.path=route\(/g)||[]).length;
+    s=s.replace(/n\.path=route\(/g,"n.path=npcRoute(");
+    log.push("Sound fix: renamed the NPC route function ("+c+" call sites updated)");
+  }else log.push("Sound fix: not needed, no clashing route function found");
+  const a="function initAudio(){if(ac)return;try{";
+  if(s.includes(a)){s=s.replace(a,"function initAudio(){if(ac){if(ac.state===\"suspended\")ac.resume();return}try{");log.push("Audio fix: suspended audio now resumes")}
+  else log.push("Audio fix: initAudio not found, skipped");
+  const NUMS=`
+let hvUntil=0,usedN={},demMesh=null;
+function bl(g,a,b,r1,r2,c){const A=new V3(...a),B=new V3(...b),d=B.clone().sub(A),L=d.length(),m=new G.Mesh(new G.CylinderGeometry(r2,r1,L,10),new G.MeshBasicMaterial({color:c,transparent:true,opacity:.85}));m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(UP,d.normalize());g.add(m)}
+MODELS.dem=function(g){const D=0x1a0a0a,F=0x2b0d0d,R=0xff2020,R2=0xc00d0d,O=0xff7a1a;
+ [-1,1].forEach(s=>{limb(g,[s*.25,1.0,0],[s*.52,.72,.25],.17,.15,D);limb(g,[s*.52,.72,.25],[s*.45,.28,.1],.15,.12,D);ad(g,box(.2,.2,.1),R2,s*.55,.76,.4,{b:1});ad(g,box(.4,.3,.4),R,s*.45,.15,.12,{b:1});[-1,0,1].forEach(k=>ad(g,cone(.06,.3),O,s*.45+k*.14,.42,.3,{b:1}))});
+ ad(g,sph(.38),D,0,1.0,0,{s:[1.2,.8,.9]});ad(g,sph(.5),D,0,1.5,.02,{s:[1.2,1,.8]});
+ [[0,1.25,.4],[-.18,1.45,.38],[.16,1.1,.42]].forEach(([x,y,z])=>ad(g,cone(.06,.25),O,x,y,z,{b:1}));
+ for(let i=0;i<30;i++){const u=i/29*2-1,a=i*2.4,q=Math.sqrt(1-u*u),dx=q*Math.cos(a),dz=q*Math.sin(a),f=dz>.3?.45:.8;if(dz>.5&&Math.abs(u)<.55)continue;limb(g,[0,1.9,-.05],[dx*f*.9,1.9+u*f*.9+.05,dz*f*.9-.05],.1,.004,F)}
+ ad(g,sph(.3),0x140707,0,1.92,.06,{s:[1,1.1,.95]});
+ [-1,1].forEach(s=>{ad(g,sph(.08),0x000000,s*.11,1.98,.31,{b:1,s:[1,1.2,.4]});ad(g,sph(.035),R,s*.11,1.98,.34,{b:1})});
+ ad(g,box(.3,.08,.04),0x000000,0,1.8,.33,{b:1});teeth(g,8,.28,1.84,.35,true,.06);teeth(g,8,.28,1.76,.35,false,.06);
+ ad(g,sph(.3),0x3a0b0b,0,2.1,0,{s:[1.05,.5,1.05]});ad(g,box(.46,.04,.3),0x3a0b0b,0,2.03,.3);ad(g,box(.1,.1,.03),R,0,2.12,.29,{b:1});
+ [-1,1].forEach(s=>{bl(g,[s*.2,2.15,0],[s*.62,2.62,-.1],.11,.07,R);bl(g,[s*.62,2.62,-.1],[s*.42,3.2,-.2],.07,.005,R)});
+ const fist=(x,y,z)=>{ad(g,box(.5,.45,.5),R2,x,y,z,{b:1});[[.15,.3,0],[-.15,.3,0],[0,0,.3],[.3,0,0],[-.3,0,0]].forEach(([a,b,c])=>ad(g,cone(.09,.26),R,x+a,y+b,z+c,{b:1,r:[c?1.57:0,0,a&&!b?(a>0?-1.57:1.57):0]}))};
+ limb(g,[.5,1.7,0],[.95,1.75,.3],.13,.11,D);fist(1.05,1.8,.35);limb(g,[-.5,1.65,0],[-.95,1.3,.3],.13,.11,D);fist(-1.05,1.25,.35);
+ tube(g,[[0,1.0,-.3],[.5,.6,-.6],[1.1,.9,-.45],[1.3,1.6,-.25],[1.35,2.15,-.1]],.035,R);ad(g,box(.24,.24,.05),R,1.35,2.3,-.1,{b:1,r:[0,0,.785]});
+ const h=new G.Mesh(new G.SphereGeometry(.9,16,12),new G.MeshBasicMaterial({color:0xff2000,transparent:true,opacity:.08,depthWrite:false}));h.position.set(0,1.5,0);g.add(h)};
+function cool(k,sec){const t=usedN[k];if(t!==undefined&&tick>=t&&tick-t<sec){note('Busy. Try again in '+(sec-(tick-t))+'s.');return false}usedN[k]=tick;return true}
+function heavenKill(m){if(performance.now()>=hvUntil)return false;if(m.id==='dem'){m.banned=true;m.room='gone'}else if(m.sw!==undefined){m.room='dining';m.sw=0;m.cd=8}if(m===smileMon)smile.s='gone';note('Heaven shields you.');return true}
+function spawnDemon(){if(!demMesh){demMesh=new G.Group();MODELS.dem(demMesh);scene.add(demMesh)}
+ let m=mons.find(x=>x.id==='dem');if(!m){m={id:'dem',name:'The Demon',sides:'LRW',fy:2.1,fast:true,mesh:demMesh,room:'gone',cd:9,deadline:0,side:null,sw:0,banned:true,aggr:0};mons.push(m)}
+ m.banned=false;m.side=rnd(['L','R','W']);m.room=ATK[m.side];m.deadline=performance.now()+2500;m.sw=0;sfx.har();tone(50,1.8,'sawtooth',.7,25);note('666... something picked up the phone.')}
+function heaven(){hvUntil=performance.now()+60000;hp=100+25*shop.hp;power=100;outT=null;earn(77);
+ mons.forEach(m=>{if(m.id==='dem'){m.banned=true;m.room='gone'}else if(/door/.test(m.room)){m.room='dining';m.sw=0;m.cd=8}});
+ if(smile.s==='office')smile.s='gone';if(cove.s==='run')cove.s='closed';if(vent.s==='peek')vent.s='idle';
+ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.9,'sine',.3),i*220));
+ let o=document.getElementById('heavenfx');if(!o){o=document.createElement('div');o.id='heavenfx';o.style.cssText='position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;transition:opacity 1.2s;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#7a5a00;font-size:clamp(28px,7vw,64px);text-shadow:0 0 20px #fff;background:radial-gradient(circle at 50% 35%,#fff 0,#fff3c4 35%,#9fd8ff 100%)';document.body.appendChild(o)}
+ o.textContent='You ascend to the heavens';o.style.opacity=1;setTimeout(()=>{o.style.opacity=0},3000);
+ note('777: Heaven shields you for 60 seconds. Health and power restored. +77 coins.');ui()}
+function numCall(raw){const c=String(raw).split(' ').join('');if(!/^[0-9().+-]+$/.test(c))return false;const n=c.replace(/[^0-9]/g,'');
+ if(guest()){note('Only the host can call numbers.');return true}
+ const live=running&&phase==='night';
+ if(n==='666'){if(!live)note('The line crackles... nothing answers yet.');else{unlock('hell');spawnDemon()}return true}
+ if(n==='777'){if(!live)note('A choir hums on the line. Try it during a night.');else{unlock('heaven');heaven()}return true}
+ if(n==='911'){if(!live)note('Emergency services: no emergency right now.');else if(cool('911',120)){unlock('emerg');mons.forEach(m=>{if(m.banned)return;if(m.id==='dem'){m.banned=true;m.room='gone'}else if(/door/.test(m.room)){m.room='dining';m.sw=0;m.cd=10}});if(smile.s==='office')smile.s='gone';if(cove.s==='run'||cove.s==='laugh')cove.s='closed';if(vent.s==='peek')vent.s='idle';hp=Math.min(100+25*shop.hp,hp+25);sfx.siren();note('911: Police arrived. Everything at your doors fled. +25 health.');ui()}return true}
+ if(n==='411'){if(!live)note('Directory: all quiet.');else if(cool('411',20)){const W={ldoor:'left door',rdoor:'right door',wdoor:'window',lhall:'left hall',rhall:'right hall',whall:'window hall'},th=[];mons.forEach(m=>{if(!m.banned&&m.room!=='gone')th.push(m.name+' ('+(W[m.room]||m.room)+')')});note(th.length?'Directory: '+th.join(', '):'Directory: no listings.')}return true}
+ if(n==='555'){if(!live)note('Power Company: call during a night.');else if(cool('555',300)){power=Math.min(100,power+15);ui();note('Power Company: +15% battery.')}return true}
+ if(n==='8675309'){try{if(!localStorage.getItem('aarav-jenny')){localStorage.setItem('aarav-jenny','1');earn(30);note('Jenny picked up. +30 coins')}else note('Jenny is not available anymore.')}catch(e){}return true}
+ if(n==='404'){note('Error 404: number not found.');return true}
+ note('The number you have dialed is not in service.');return true}
+`;
+  const rep=(a,b,l)=>{if(s.includes(a)){s=s.replace(a,()=>b);log.push('Phone: '+l)}else log.push('Phone: '+l+' (not found, skipped)')};
+  rep('<button id="codebtn">Codes</button>','<button id="codebtn">Call a number</button>','Codes button renamed to Call a number');
+  rep('placeholder="Enter code"','placeholder="Enter a number"','input hint updated');
+  rep('function tryCode(raw){',NUMS+'function tryCode(raw){if(numCall(raw))return;','secret numbers added (666, 777, 911, 411, 555, 8675309, 404)');
+  rep('function kill(m){if(havenBlock(m))return;','function kill(m){if(heavenKill(m)||havenBlock(m))return;','heaven shield hooked in');
+  rep('earn(4);if(m.id=="cin"){','earn(4);if(m.id=="cin"||m.id=="dem"){','demon can be shut out');
+  rep('["cin","Cinder","A charred','["dem","The Demon","Called up by dialing 666. Glowing horns, spiked fists and a skull grin under a mane of fur. It runs straight at a door or the window and gives you about two and a half seconds."],["cin","Cinder","A charred','Monsters journal entry added');
+  rep('["haven","Tucked In"','["hell","Wrong Number","Dial 666 on the phone"],["heaven","Ascended","Dial 777 on the phone"],["emerg","Emergency","Dial 911 on the phone"],["haven","Tucked In"','three new badges added');
+  const SPEAK=`
+function speakLine(l,who){try{const ss=window.speechSynthesis,cb=$('stvoice');if(!ss||who==='Bobbin'||(cb&&!cb.checked))return;ss.cancel();
+ const u=new SpeechSynthesisUtterance(l.replace(/[*]giggle[*]/g,'hee hee!').replace(/[.][.][.]/g,', ').replace(/[*]/g,''));
+ const P={'Phone Guy':[.75,.95],'Bobbin':[1.9,1.2],'Subz Pizza':[1.1,1.05]}[who]||[1,1];
+ u.pitch=P[0];u.rate=P[1];u.volume=Math.min(1,vol);
+ const vs=ss.getVoices().filter(v=>/^en/i.test(v.lang)),pick=re=>vs.find(v=>re.test(v.name));
+ const v=who==='Bobbin'?(pick(/female|samantha|zira|susan|karen|google uk english female/i)||vs[0]):(pick(/male|daniel|david|alex|mark|google uk english male/i)||vs[0]);
+ if(v)u.voice=v;ss.speak(u)}catch(e){}}
+`;
+  rep('function stopCall(){',SPEAK+'function stopCall(){try{speechSynthesis.cancel()}catch(e){}','spoken voices for calls (Phone Guy, Bobbin, Subz Pizza)');
+  rep('$("callbar").textContent=who+": "+l;','$("callbar").textContent=who+": "+l;speakLine(l,who);','calls are read aloud');
+  rep('t+=Math.max(3200,l.length*55)','t+=Math.max(3200,l.length*(window.speechSynthesis?85:55))','call timing matches speech');
+  rep('<label>Screen grain and vignette','<label>Phone voice <input type="checkbox" id="stvoice" checked></label><label>Screen grain and vignette','Phone voice switch added to Settings');
+  const n0=s.length;
+  s=s.replace(/,\s*\{id:"disc"[^\n]*\}\];/,"];");
+  log.push(s.length<n0?"Shop: removed Haven Discount":"Shop: Haven Discount not found, skipped");
+  s=s.replace("shop.disc?15:22","22");
+  let m=0;
+  s=s.replace(/(\{id:"(?:bat|hp)",name:"[^"]*",)max:\d+/g,(a,b)=>{m++;return b+"max:1"});
+  log.push("Shop: "+m+" multi-level items made one-time purchases");
+  return{s,log};
+}
+function show(log,err){$("err").textContent=err||"";$("log").innerHTML=(log||[]).map(l=>"<div>• "+l.replace(/[<>&]/g,"")+"</div>").join("")}
+function run(text,remember){
+  if(!/<script/i.test(text)||!/<html/i.test(text)){show([],"That doesn’t look like the game’s HTML file.");return}
+  const {s,log}=patch(text);patched=s;srcText=text;show(log);
+  if(remember){try{localStorage.setItem(KEY,text)}catch(e){}}
+  const g=$("game");g.srcdoc=s;g.style.display="block";$("home").style.display="none";$("bar").style.display="flex";
+  g.onload=()=>{try{g.focus();g.contentWindow.focus()}catch(e){}};
+}
+function readFile(file){if(!file)return;const r=new FileReader();r.onload=()=>run(String(r.result),true);r.onerror=()=>show([],"Couldn’t read that file.");r.readAsText(file)}
+$("f").onchange=e=>{readFile(e.target.files[0]);e.target.value=""};
+$("f2").onchange=e=>{readFile(e.target.files[0]);e.target.value=""};
+const d=$("drop");
+["dragenter","dragover"].forEach(t=>d.addEventListener(t,e=>{e.preventDefault();d.classList.add("over")}));
+["dragleave","drop"].forEach(t=>d.addEventListener(t,e=>{e.preventDefault();d.classList.remove("over")}));
+d.addEventListener("drop",e=>readFile(e.dataTransfer.files[0]));
+try{window.claude&&window.claude.use&&window.claude.use("downloads").then(d=>{dls=d;if(d)$("dl").style.display=""}).catch(()=>{})}catch(e){}
+$("dl").onclick=async()=>{if(!dls||!patched)return;try{const r=await dls.save({filename:"aarav-patched.html",data:patched});$("stat").textContent=r.status=="saved"?"Saved patched copy":"Game loaded"}catch(e){if(!e||e.code!="declined")$("stat").textContent="Couldn’t save the file"}};
+$("full").onclick=()=>{const g=$("game");try{(g.requestFullscreen||g.webkitRequestFullscreen).call(g)}catch(e){}};
+$("home2").onclick=()=>{cloudSave();const g=$("game");g.srcdoc="";g.style.display="none";$("bar").style.display="none";$("home").style.display="flex"};
+$("last").onclick=()=>{try{const t=localStorage.getItem(KEY);if(t)run(t,false)}catch(e){show([],"No saved copy found.")}};
+try{if(localStorage.getItem(KEY))$("last").style.display=""}catch(e){}
+
+// ---- Online save: your Claude account is the login, progress is stored server-side ----
+const FLAG="aarav-cloudflag";let cdoc=null,lastSent="";
+function localKeys(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("aarav-")&&k!==KEY&&k!==FLAG)o[k]=localStorage.getItem(k)}}catch(e){}return o}
+function setWho(t,on){$("who").textContent=t;$("login").style.display=on?"none":"";$("logout").style.display=on?"":"none"}
+async function cloudSave(force){
+  if(!cdoc)return;const k=localKeys(),s=JSON.stringify(k);if(!force&&s===lastSent)return;
+  try{await cdoc.set({keys:k,savedAt:Date.now()});lastSent=s}catch(e){}}
+async function cloudLogin(auto){
+  let db=null,user=null;
+  try{if(window.claude&&window.claude.use){db=await window.claude.use("db");user=await window.claude.use("user")}}catch(e){}
+  if(!db||!user){setWho(auto?"Not logged in. Progress is saved only in this browser.":"Login isn’t available here. Open this page in claude.ai while signed in.",false);return}
+  try{
+    const id=await user.id();if(!id)throw {code:"no_id"};
+    cdoc=db.collection("data/users/"+id).doc("aarav-save");
+    const snap=await cdoc.get();
+    if(snap.exists){const k=(snap.data()||{}).keys||{};Object.keys(k).forEach(n=>{if(n.startsWith("aarav-")&&n!==KEY&&n!==FLAG&&typeof k[n]==="string"){try{localStorage.setItem(n,k[n])}catch(e){}}})}
+    await cloudSave(true);
+    try{localStorage.setItem(FLAG,"1")}catch(e){}
+    const me=await user.me();
+    setWho("Logged in as "+((me&&me.name)||"your Claude account")+". Progress saves online.",true);
+  }catch(e){cdoc=null;setWho("Couldn’t log in ("+((e&&e.code)||"error")+"). Progress stays in this browser.",false)}
+}
+$("login").onclick=()=>cloudLogin(false);
+$("logout").onclick=async()=>{
+  await cloudSave(true);cdoc=null;lastSent="";
+  try{Object.keys(localKeys()).forEach(n=>localStorage.removeItem(n));localStorage.removeItem(FLAG)}catch(e){}
+  setWho("Logged out. Progress on this device was cleared. Your online save is kept.",false)};
+setInterval(()=>{if($("game").style.display==="block")cloudSave()},15000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)cloudSave()});
+try{if(localStorage.getItem(FLAG))cloudLogin(true)}catch(e){}
+
+// ---- Embedded game: the owner imports once, then "Save game into this page" bakes it in for everyone ----
+try{const t=$("emb").textContent.trim();if(t)embText=JSON.parse(t)}catch(e){}
+if(embText){$("drop").style.display="none";$("last").style.display="none";$("playemb").style.display="";$("hometxt").textContent="Press Play to start the game. The sound and shop fixes are applied automatically."}
+$("playemb").onclick=()=>run(embText,false);
+try{window.claude&&window.claude.use&&window.claude.use("artifact").then(a=>{art=a;if(a&&!embText)$("bake").style.display=""}).catch(()=>{})}catch(e){}
+$("bake").onclick=async()=>{
+  if(!art||!srcText)return;$("stat").textContent="Saving the game into this page…";
+  try{
+    const d=new DOMParser().parseFromString(PRISTINE,"text/html");
+    d.getElementById("emb").textContent=JSON.stringify(srcText).replace(/</g,"\\u003c");
+    await art.publish("<!DOCTYPE html>\n"+d.documentElement.outerHTML);
+  }catch(e){$("stat").textContent=(e&&e.code==="conflict")?"The page changed while saving. Try again.":"Couldn’t save into the page ("+((e&&e.code)||"error")+")"}
+};
+</script>
+</body>
+</html>
