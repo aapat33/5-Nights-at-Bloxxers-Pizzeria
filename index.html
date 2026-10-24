@@ -104,7 +104,7 @@ input[type=checkbox]{width:20px;height:20px}
     <label>Volume <input type="range" id="stvol" min="0" max="100" value="100"></label>
     <label>Brightness <input type="range" id="stbri" min="60" max="220" value="150"></label>
     <label>Look sensitivity <input type="range" id="stsens" min="40" max="200" value="100"></label>
-    <label>Screen grain and vignette <input type="checkbox" id="stfx" checked></label>
+    <label>Phone voice <input type="checkbox" id="stvoice" checked></label><label>Screen grain and vignette <input type="checkbox" id="stfx" checked></label>
     <p>Walk: W A S D. Look: arrow keys, mouse near the left or right edge, drag, or touchpad two-finger scroll. E picks up keys and opens doors. Space opens and closes the cameras (only from the office), 1 to 9 pick a camera.</p>
   </div>
   <div class="row"><button class="big" id="stback">Back</button><button id="stquit">Quit to menu</button></div></div>
@@ -126,8 +126,8 @@ input[type=checkbox]{width:20px;height:20px}
 <div class="ov" id="shop"><h1>Shop</h1><p id="shopc"></p><div id="shopl"></div><button id="shopback">Back</button></div>
 <div class="ov" id="phone"><h1>Telephone</h1><p id="phonep">Who do you want to call?</p>
   <div class="row"><button id="callguy">Call Phone Guy (advice)</button><button id="callbob">Call Bobbin</button><button id="calldel">Call Subz Pizza Delivery</button></div>
-  <div class="row"><button id="codebtn">Codes</button><button id="phoneback">Hang up</button></div>
-  <div class="row" id="coderow" style="display:none"><input id="codein" maxlength="16" placeholder="Enter code" autocomplete="off"><button id="codego">Enter</button></div></div>
+  <div class="row"><button id="codebtn">Call a number</button><button id="phoneback">Hang up</button></div>
+  <div class="row" id="coderow" style="display:none"><input id="codein" maxlength="16" placeholder="Enter a number" autocomplete="off"><button id="codego">Enter</button></div></div>
 <div class="ov" id="talk"><h1 id="talkt"></h1><p id="talkp" style="font-size:20px"></p><div class="row" id="talkb"></div></div>
 <div class="ov" id="card"><h1 id="cardt"></h1><p id="cardp">12:00 AM</p></div>
 <div class="ov" id="dead"><h1 id="deadt"></h1><div class="row"><button class="big" id="retry">New game</button><button id="deadmenu">Main menu</button></div></div>
@@ -462,7 +462,7 @@ let ac,vol=1;const drones=[];
 function route(a,g,pan){a.connect(g);if(pan!==undefined&&ac.createStereoPanner){const sp=ac.createStereoPanner();sp.pan.value=clamp(pan,-1,1);g.connect(sp).connect(ac.destination)}else g.connect(ac.destination)}
 function tone(f,d,ty,v,f2,pan){if(!ac)return;const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=ty;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(Math.max(v*vol,.0002),t);g.gain.exponentialRampToValueAtTime(.001,t+d);route(o,g,pan);o.start();o.stop(t+d)}
 function noise(d,v,pan){if(!ac)return;const t=ac.currentTime,b=ac.createBuffer(1,ac.sampleRate*d,ac.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;const s=ac.createBufferSource(),g=ac.createGain();s.buffer=b;g.gain.setValueAtTime(Math.max(v*vol,.0002),t);g.gain.exponentialRampToValueAtTime(.001,t+d);route(s,g,pan);s.start()}
-function initAudio(){if(ac)return;try{ac=new(window.AudioContext||window.webkitAudioContext)();[48,49.4].forEach(f=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.05*vol;drones.push(g);o.connect(g).connect(ac.destination);o.start()})}catch(e){}}
+function initAudio(){if(ac){if(ac.state==="suspended")ac.resume();return}try{ac=new(window.AudioContext||window.webkitAudioContext)();[48,49.4].forEach(f=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.05*vol;drones.push(g);o.connect(g).connect(ac.destination);o.start()})}catch(e){}}
 const sfx={step:()=>tone(70,.18,'sine',.5),door:()=>{tone(110,.15,'square',.12);noise(.12,.15)},scream:()=>{noise(1.3,.9);tone(900,1.2,'sawtooth',.4,180);tone(1300,1.1,'square',.25,140)},
  scrape:()=>{noise(.8,.25);tone(240,.7,'sawtooth',.08,90)},hiss:()=>noise(.6,.3),boom:()=>{noise(.9,1);tone(50,.9,'sawtooth',.6,25)},
  beat:()=>{tone(55,.12,'sine',.9);setTimeout(()=>tone(46,.15,'sine',.7),170)},
@@ -482,7 +482,7 @@ const ACH=[["n1","First Dawn","Survive Night 1"],["n2","Getting Used To It","Sur
  ["stare","It Stares Back","Get killed by Sunny"],["sunny","Sunny","Survive Sunny: stay off the Play Room camera until it leaves"],
  ["taxed","Taxed","Say yes when Bobbin asks for your battery"],["nobat","No batteries for you","Shut the right door on Bobbin before he asks"],["eye","Eye Contact","Look straight at the Scaredy Whisperer before it attacks"],["sea","Not Today, Captain","Stop Captain Barnacle at your door or window"],
  ["escape","Escaped","Escape Aarav's Pizzeria after Night 5"],
- ["day","Overtime","Continue past Night 5 into daytime"],["forgive","Kind Heart","Forgive Mr. Pennington"],["grudge","Grudge","Refuse to forgive Mr. Pennington"],["hunt","Hunted","Survive an Evil Hunt"],["room","Sweet Dreams","Visit Bobbin's Room"],["shop","Big Spender","Buy something from the shop"],["bread","Daily Bread","Survive Sub-Ezekiel"],["code","Secret Code","Enter the secret code"],["haven","Tucked In","Rest in Bobbin's safe haven"]];
+ ["day","Overtime","Continue past Night 5 into daytime"],["forgive","Kind Heart","Forgive Mr. Pennington"],["grudge","Grudge","Refuse to forgive Mr. Pennington"],["hunt","Hunted","Survive an Evil Hunt"],["room","Sweet Dreams","Visit Bobbin's Room"],["shop","Big Spender","Buy something from the shop"],["bread","Daily Bread","Survive Sub-Ezekiel"],["code","Secret Code","Enter the secret code"],["hell","Wrong Number","Dial 666 on the phone"],["heaven","Ascended","Dial 777 on the phone"],["emerg","Emergency","Dial 911 on the phone"],["haven","Tucked In","Rest in Bobbin's safe haven"]];
 let ach={};try{ach=JSON.parse(localStorage.getItem("aarav-ach"))||{}}catch(e){}
 function note(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),3200)}
 function unlock(id){if(ach[id])return;ach[id]=1;try{localStorage.setItem("aarav-ach",JSON.stringify(ach))}catch(e){}note("Badge: "+ACH.find(a=>a[0]==id)[1]);earn(10)}
@@ -498,7 +498,7 @@ const MON=[["cra","The Crawler","A pale, hunched thing with glowing eyes. It pre
  ["cap","Captain Barnacle","A rusted red-orange pirate crocodile who lives behind the Pirate's Cove curtain. When it opens, you'll hear him laugh, then pounding footsteps. Listen to the footsteps: they tell you which way he is running. Shut that door, or the shutter, before he arrives."],
  ["man","Mr. Pennington","The manager. If you refuse to forgive him at noon on Day 6, he comes back as something far worse. He is rare, he is quick, and he can use the left door, the right door or the window. You get about a second and a half."],
  ["ezk","Sub-Ezekiel","A loaf of bread that woke up. Extremely rare. If the bread on the kitchen counter starts to twitch, run to your office. It comes to a door or the window and gives you about two seconds."],
- ["cin","Cinder","A charred, burning figure that only appears during a fire alarm, and only rarely. It comes straight for a door or the window and gives you about two seconds. Shut it out and the smoke clears."]];
+ ["dem","The Demon","Called up by dialing 666. Glowing horns, spiked fists and a skull grin under a mane of fur. It runs straight at a door or the window and gives you about two and a half seconds."],["cin","Cinder","A charred, burning figure that only appears during a fire alarm, and only rarely. It comes straight for a door or the window and gives you about two seconds. Shut it out and the smoke clears."]];
 let jour={};try{jour=JSON.parse(localStorage.getItem("aarav-journal"))||{}}catch(e){}
 function entry(id){if(jour[id])return;jour[id]=1;try{localStorage.setItem("aarav-journal",JSON.stringify(jour))}catch(e){}note("Journal: "+MON.find(m=>m[0]==id)[1]+" added");earn(10)}
 
@@ -572,7 +572,7 @@ function step(){
   }
   if(!endless&&tick>=NIGHT_LEN)return win();
   ui()}
-function kill(m){if(havenBlock(m))return;
+function kill(m){if(heavenKill(m)||havenBlock(m))return;
   running=false;escapeOn=false;clearInterval(timer);forced=false;$("comp").style.display="none";$("obj").style.display="none";$("prompt").style.display="none";setCam(false);wl=0;unlock("die");if(alarm.on)unlock("iq");if(m===smileMon)unlock("stare");alarm.on=false;if(!endless&&!exploreOnly&&!guest())resetSave();ui();netEv("dead",m.id);
   js={m,t:0,from:m.mesh.position.clone()};m.mesh.visible=true;
   $("deadt").textContent=m.name+" got you."+(endless||exploreOnly?"":" Your save was reset.");$("retry").textContent=exploreOnly?"Try again":"New game";$("flash").classList.remove("go");void $("flash").offsetWidth;$("flash").classList.add("go");
@@ -591,7 +591,7 @@ let coins=0,shop={portal:0,bat:0,eff:0,flash:0,vent:0,sens:0,hp:0,disc:0},haven=
 try{const sv=JSON.parse(localStorage.getItem("aarav-shop")||"{}");coins=sv.c||0;Object.assign(shop,sv.s||{})}catch(e){}
 function saveShop(){try{localStorage.setItem("aarav-shop",JSON.stringify({c:coins,s:shop}))}catch(e){}}
 function earn(n){coins+=n;saveShop();$("coin").textContent=coins+" coins"}
-const havenCost=()=>shop.disc?15:22,inRoomAt=(x,z)=>z<-46&&Math.abs(x)<6.1,inRoom=()=>inRoomAt(P.x,P.z);
+const havenCost=()=>22,inRoomAt=(x,z)=>z<-46&&Math.abs(x)<6.1,inRoom=()=>inRoomAt(P.x,P.z);
 function startHaven(){if(haven.t>0)return true;const c=havenCost();if(power<c){note("Not enough battery for the haven ("+c+"% needed).");return false}
   power-=c;haven.t=HOUR_SECS;unlock("haven");sfx.key();note("Bobbin tucks you in. Nothing can hurt you in here for 1 hour.");ui();return true}
 function havenBlock(m){if(!(running&&phase=="night"&&haven.t>0&&inRoom()))return false;
@@ -600,13 +600,12 @@ function havenBlock(m){if(!(running&&phase=="night"&&haven.t>0&&inRoom()))return
   note("Bobbin's haven kept "+m.name+" away.");return true}
 const SHOP=[
  {id:"portal",name:"Haven Portal",max:1,cost:()=>250,desc:"A portal in your office that takes you straight to Bobbin's Room. Using it still costs the haven's battery fee. A portal inside takes you back."},
- {id:"bat",name:"Battery Pack",max:5,cost:l=>60+25*l,desc:"+6% starting battery every night."},
+ {id:"bat",name:"Battery Pack",max:1,cost:l=>60+25*l,desc:"+6% starting battery every night."},
  {id:"eff",name:"Efficient Doors",max:1,cost:()=>120,desc:"Shut doors and the shutter use half the battery."},
  {id:"flash",name:"Flashlight",max:1,cost:()=>150,desc:"A light on you whenever you walk around at night."},
  {id:"vent",name:"Vent Booster",max:1,cost:()=>100,desc:"The heat vent drives off the Grinner twice as fast and costs less."},
  {id:"sens",name:"Motion Sensor",max:1,cost:()=>200,desc:"Tells you exactly which door or window something is at."},
- {id:"hp",name:"Tough Skin",max:2,cost:l=>100+60*l,desc:"+25 starting health."},
- {id:"disc",name:"Haven Discount",max:1,cost:()=>180,desc:"Bobbin's haven costs 15% battery instead of 22%."}];
+ {id:"hp",name:"Tough Skin",max:1,cost:l=>100+60*l,desc:"+25 starting health."}];
 function renderShop(){$("shopc").textContent="You have "+coins+" coins. Earn more by surviving hours, blocking monsters, finishing nights and unlocking badges.";
   $("shopl").innerHTML=SHOP.map(it=>{const l=shop[it.id]||0,done=l>=it.max,c=it.cost(l);return`<div class="a ${done?"got":""}"><b>${it.name} (${l}/${it.max})</b>${it.desc}<br><button data-i="${it.id}" ${done||coins<c?"disabled":""}>${done?"Owned":"Buy for "+c+" coins"}</button></div>`}).join("")}
 function openShop(from){shopFrom=from;renderShop();$(from).classList.remove("show");$("shop").classList.add("show")}
@@ -624,13 +623,61 @@ const ADVICE={
  5:["Last night. Listen, if you find the keys, you can leave through the entrance by the stage after your shift.","The first key is in the Play Room. The yellow one guards it. Don't look at him. Keep your eyes on the floor."],
  6:["Still here? ... I wasn't supposed to still be calling you. Just keep your eyes open. And watch the bread."]};
 const TIPS=[["Tip: the shutter only works if you shut it before the timer runs out. Two seconds for the fast ones."],["Tip: the heat vent costs a lot of battery. Don't leave it on."],["Tip: never look straight at the yellow one. If you see him at a door, look away or shut it."],["Tip: Bobbin's bed will protect you for an hour. It costs battery."],["Tip: coins buy useful things from the shop. Spend them."],["Tip: if the alarm is going, something even worse might be coming. Be ready."]];
-function stopCall(){callTimers.forEach(clearTimeout);callTimers=[];$("callbar").style.display="none"}
-function playCall(lines,who){stopCall();let t=0;lines.forEach(l=>{callTimers.push(setTimeout(()=>{$("callbar").textContent=who+": "+l;$("callbar").style.display="block";[0,90,180].forEach((d,i)=>setTimeout(()=>tone(500+i*60,.07,'square',.08),d))},t));t+=Math.max(3200,l.length*55)});callTimers.push(setTimeout(stopCall,t+800))}
+
+function speakLine(l,who){try{const ss=window.speechSynthesis,cb=$('stvoice');if(!ss||who==='Bobbin'||(cb&&!cb.checked))return;ss.cancel();
+ const u=new SpeechSynthesisUtterance(l.replace(/[*]giggle[*]/g,'hee hee!').replace(/[.][.][.]/g,', ').replace(/[*]/g,''));
+ const P={'Phone Guy':[.75,.95],'Bobbin':[1.9,1.2],'Subz Pizza':[1.1,1.05]}[who]||[1,1];
+ u.pitch=P[0];u.rate=P[1];u.volume=Math.min(1,vol);
+ const vs=ss.getVoices().filter(v=>/^en/i.test(v.lang)),pick=re=>vs.find(v=>re.test(v.name));
+ const v=who==='Bobbin'?(pick(/female|samantha|zira|susan|karen|google uk english female/i)||vs[0]):(pick(/male|daniel|david|alex|mark|google uk english male/i)||vs[0]);
+ if(v)u.voice=v;ss.speak(u)}catch(e){}}
+function stopCall(){try{speechSynthesis.cancel()}catch(e){}callTimers.forEach(clearTimeout);callTimers=[];$("callbar").style.display="none"}
+function playCall(lines,who){stopCall();let t=0;lines.forEach(l=>{callTimers.push(setTimeout(()=>{$("callbar").textContent=who+": "+l;speakLine(l,who);$("callbar").style.display="block";[0,90,180].forEach((d,i)=>setTimeout(()=>tone(500+i*60,.07,'square',.08),d))},t));t+=Math.max(3200,l.length*(window.speechSynthesis?85:55))});callTimers.push(setTimeout(stopCall,t+800))}
 function answerCall(){phone.ring=0;playCall(ADVICE[Math.min(Math.max(night,1),6)]||ADVICE[1],"Phone Guy")}
 function openPhone(){if(!running)return;pauseOn();$("coderow").style.display="none";$("phone").classList.add("show")}
 function startBread(fast){if(!running||phase!="night"||ez.s!="idle")return;ez.s="stir";ez.t=fast?4:10;tone(70,2,'sine',.4,45)}
 function awakenBread(){const m=mons.find(x=>x.id=="ezk");if(!m)return;ez.s="awake";breadG.visible=false;m.banned=false;m.side=rnd(["L","R","W"]);m.room=ATK[m.side];m.deadline=performance.now()+2200;m.sw=0;sfx.step();tone(80,1.4,'sawtooth',.5,50)}
-function tryCode(raw){const c=raw.trim().toUpperCase().replace(/\s/g,"");
+
+let hvUntil=0,usedN={},demMesh=null;
+function bl(g,a,b,r1,r2,c){const A=new V3(...a),B=new V3(...b),d=B.clone().sub(A),L=d.length(),m=new G.Mesh(new G.CylinderGeometry(r2,r1,L,10),new G.MeshBasicMaterial({color:c,transparent:true,opacity:.85}));m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(UP,d.normalize());g.add(m)}
+MODELS.dem=function(g){const D=0x1a0a0a,F=0x2b0d0d,R=0xff2020,R2=0xc00d0d,O=0xff7a1a;
+ [-1,1].forEach(s=>{limb(g,[s*.25,1.0,0],[s*.52,.72,.25],.17,.15,D);limb(g,[s*.52,.72,.25],[s*.45,.28,.1],.15,.12,D);ad(g,box(.2,.2,.1),R2,s*.55,.76,.4,{b:1});ad(g,box(.4,.3,.4),R,s*.45,.15,.12,{b:1});[-1,0,1].forEach(k=>ad(g,cone(.06,.3),O,s*.45+k*.14,.42,.3,{b:1}))});
+ ad(g,sph(.38),D,0,1.0,0,{s:[1.2,.8,.9]});ad(g,sph(.5),D,0,1.5,.02,{s:[1.2,1,.8]});
+ [[0,1.25,.4],[-.18,1.45,.38],[.16,1.1,.42]].forEach(([x,y,z])=>ad(g,cone(.06,.25),O,x,y,z,{b:1}));
+ for(let i=0;i<30;i++){const u=i/29*2-1,a=i*2.4,q=Math.sqrt(1-u*u),dx=q*Math.cos(a),dz=q*Math.sin(a),f=dz>.3?.45:.8;if(dz>.5&&Math.abs(u)<.55)continue;limb(g,[0,1.9,-.05],[dx*f*.9,1.9+u*f*.9+.05,dz*f*.9-.05],.1,.004,F)}
+ ad(g,sph(.3),0x140707,0,1.92,.06,{s:[1,1.1,.95]});
+ [-1,1].forEach(s=>{ad(g,sph(.08),0x000000,s*.11,1.98,.31,{b:1,s:[1,1.2,.4]});ad(g,sph(.035),R,s*.11,1.98,.34,{b:1})});
+ ad(g,box(.3,.08,.04),0x000000,0,1.8,.33,{b:1});teeth(g,8,.28,1.84,.35,true,.06);teeth(g,8,.28,1.76,.35,false,.06);
+ ad(g,sph(.3),0x3a0b0b,0,2.1,0,{s:[1.05,.5,1.05]});ad(g,box(.46,.04,.3),0x3a0b0b,0,2.03,.3);ad(g,box(.1,.1,.03),R,0,2.12,.29,{b:1});
+ [-1,1].forEach(s=>{bl(g,[s*.2,2.15,0],[s*.62,2.62,-.1],.11,.07,R);bl(g,[s*.62,2.62,-.1],[s*.42,3.2,-.2],.07,.005,R)});
+ const fist=(x,y,z)=>{ad(g,box(.5,.45,.5),R2,x,y,z,{b:1});[[.15,.3,0],[-.15,.3,0],[0,0,.3],[.3,0,0],[-.3,0,0]].forEach(([a,b,c])=>ad(g,cone(.09,.26),R,x+a,y+b,z+c,{b:1,r:[c?1.57:0,0,a&&!b?(a>0?-1.57:1.57):0]}))};
+ limb(g,[.5,1.7,0],[.95,1.75,.3],.13,.11,D);fist(1.05,1.8,.35);limb(g,[-.5,1.65,0],[-.95,1.3,.3],.13,.11,D);fist(-1.05,1.25,.35);
+ tube(g,[[0,1.0,-.3],[.5,.6,-.6],[1.1,.9,-.45],[1.3,1.6,-.25],[1.35,2.15,-.1]],.035,R);ad(g,box(.24,.24,.05),R,1.35,2.3,-.1,{b:1,r:[0,0,.785]});
+ const h=new G.Mesh(new G.SphereGeometry(.9,16,12),new G.MeshBasicMaterial({color:0xff2000,transparent:true,opacity:.08,depthWrite:false}));h.position.set(0,1.5,0);g.add(h)};
+function cool(k,sec){const t=usedN[k];if(t!==undefined&&tick>=t&&tick-t<sec){note('Busy. Try again in '+(sec-(tick-t))+'s.');return false}usedN[k]=tick;return true}
+function heavenKill(m){if(performance.now()>=hvUntil)return false;if(m.id==='dem'){m.banned=true;m.room='gone'}else if(m.sw!==undefined){m.room='dining';m.sw=0;m.cd=8}if(m===smileMon)smile.s='gone';note('Heaven shields you.');return true}
+function spawnDemon(){if(!demMesh){demMesh=new G.Group();MODELS.dem(demMesh);scene.add(demMesh)}
+ let m=mons.find(x=>x.id==='dem');if(!m){m={id:'dem',name:'The Demon',sides:'LRW',fy:2.1,fast:true,mesh:demMesh,room:'gone',cd:9,deadline:0,side:null,sw:0,banned:true,aggr:0};mons.push(m)}
+ m.banned=false;m.side=rnd(['L','R','W']);m.room=ATK[m.side];m.deadline=performance.now()+2500;m.sw=0;sfx.har();tone(50,1.8,'sawtooth',.7,25);note('666... something picked up the phone.')}
+function heaven(){hvUntil=performance.now()+60000;hp=100+25*shop.hp;power=100;outT=null;earn(77);
+ mons.forEach(m=>{if(m.id==='dem'){m.banned=true;m.room='gone'}else if(/door/.test(m.room)){m.room='dining';m.sw=0;m.cd=8}});
+ if(smile.s==='office')smile.s='gone';if(cove.s==='run')cove.s='closed';if(vent.s==='peek')vent.s='idle';
+ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.9,'sine',.3),i*220));
+ let o=document.getElementById('heavenfx');if(!o){o=document.createElement('div');o.id='heavenfx';o.style.cssText='position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;transition:opacity 1.2s;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#7a5a00;font-size:clamp(28px,7vw,64px);text-shadow:0 0 20px #fff;background:radial-gradient(circle at 50% 35%,#fff 0,#fff3c4 35%,#9fd8ff 100%)';document.body.appendChild(o)}
+ o.textContent='You ascend to the heavens';o.style.opacity=1;setTimeout(()=>{o.style.opacity=0},3000);
+ note('777: Heaven shields you for 60 seconds. Health and power restored. +77 coins.');ui()}
+function numCall(raw){const c=String(raw).split(' ').join('');if(!/^[0-9().+-]+$/.test(c))return false;const n=c.replace(/[^0-9]/g,'');
+ if(guest()){note('Only the host can call numbers.');return true}
+ const live=running&&phase==='night';
+ if(n==='666'){if(!live)note('The line crackles... nothing answers yet.');else{unlock('hell');spawnDemon()}return true}
+ if(n==='777'){if(!live)note('A choir hums on the line. Try it during a night.');else{unlock('heaven');heaven()}return true}
+ if(n==='911'){if(!live)note('Emergency services: no emergency right now.');else if(cool('911',120)){unlock('emerg');mons.forEach(m=>{if(m.banned)return;if(m.id==='dem'){m.banned=true;m.room='gone'}else if(/door/.test(m.room)){m.room='dining';m.sw=0;m.cd=10}});if(smile.s==='office')smile.s='gone';if(cove.s==='run'||cove.s==='laugh')cove.s='closed';if(vent.s==='peek')vent.s='idle';hp=Math.min(100+25*shop.hp,hp+25);sfx.siren();note('911: Police arrived. Everything at your doors fled. +25 health.');ui()}return true}
+ if(n==='411'){if(!live)note('Directory: all quiet.');else if(cool('411',20)){const W={ldoor:'left door',rdoor:'right door',wdoor:'window',lhall:'left hall',rhall:'right hall',whall:'window hall'},th=[];mons.forEach(m=>{if(!m.banned&&m.room!=='gone')th.push(m.name+' ('+(W[m.room]||m.room)+')')});note(th.length?'Directory: '+th.join(', '):'Directory: no listings.')}return true}
+ if(n==='555'){if(!live)note('Power Company: call during a night.');else if(cool('555',300)){power=Math.min(100,power+15);ui();note('Power Company: +15% battery.')}return true}
+ if(n==='8675309'){try{if(!localStorage.getItem('aarav-jenny')){localStorage.setItem('aarav-jenny','1');earn(30);note('Jenny picked up. +30 coins')}else note('Jenny is not available anymore.')}catch(e){}return true}
+ if(n==='404'){note('Error 404: number not found.');return true}
+ note('The number you have dialed is not in service.');return true}
+function tryCode(raw){if(numCall(raw))return;const c=raw.trim().toUpperCase().replace(/\s/g,"");
   if(c=="AA-R@\\/"||c=="AA-R@V"){if(guest()){note("Only the host can enter codes.");return}if(!running||phase!="night"){note("Nothing happens... but the bread seems to be listening.");return}unlock("code");startBread(true);note("The code was accepted.")}
   else if(c=="SUBZ"){try{if(!localStorage.getItem("aarav-subz")){localStorage.setItem("aarav-subz","1");earn(25);note("SUBZ! +25 coins")}else note("You already used that one.")}catch(e){}}
   else if(c=="FARTS"){tone(90,.5,'sawtooth',.4,40);noise(.3,.3);note("The sign was not lying.")}
@@ -835,7 +882,7 @@ function frame(now){
   if(running&&!guest())for(const m of mons){
     if(m.banned||!/door/.test(m.room))continue;
     if(m.id=="mim"&&!m.sw&&m.deadline-nowMs<=1000){m.sw=1;m.side=rnd(["L","R","W"].filter(x=>x!=m.side));m.room=ATK[m.side];m.deadline=nowMs+3000;sfx.step()}
-    if(nowMs>=m.deadline){if(m.side=="W"?sh:door[m.side]){m.room="dining";m.sw=0;m.cd=6+Math.random()*4;unlock("close");entry(m.id);earn(4);if(m.id=="cin"){m.banned=true;m.room="gone"}if(m.id=="ezk"){m.banned=true;m.room="gone";ez.s="idle";breadG.visible=true;unlock("bread")}}else{kill(m);break}}}
+    if(nowMs>=m.deadline){if(m.side=="W"?sh:door[m.side]){m.room="dining";m.sw=0;m.cd=6+Math.random()*4;unlock("close");entry(m.id);earn(4);if(m.id=="cin"||m.id=="dem"){m.banned=true;m.room="gone"}if(m.id=="ezk"){m.banned=true;m.room="gone";ez.s="idle";breadG.visible=true;unlock("bread")}}else{kill(m);break}}}
   // Vent monster
   if(running&&!guest()&&vent.s=="peek"){vent.t-=dt;vent.heat=ht?vent.heat+dt:0;
     if(vent.heat>=(shop.vent?.5:1)){vent.s="idle";vent.cd=12;unlock("heat");entry("gri");sfx.hiss()}else if(vent.t<=0){vent.s="idle";kill(ventMon)}}
@@ -928,17 +975,17 @@ function placeNPCs(){evacOn=false;npcs.forEach(n=>{n.mode="wander";n.path=[];npc
 let evacOn=false;
 function regionOf(x,z){if(z<-46)return{t:"bob"};if(z>-10.5)return{t:"corr"};for(const r of ROOMS){const q=RP[r];if(Math.abs(x-q.cx)<6.2&&Math.abs(z-q.cz)<5.2)return{t:"room",r}}return{t:"hall"}}
 function outPts(g){if(g.t=="corr")return[[0,-9.8],[0,-11.5]];if(g.t=="bob")return[[0,-47],[0,-44.2]];if(g.t=="room"){const q=RP[g.r],sx=q.cx>0?1:-1;return[[sx*4.3,q.cz],[0,q.cz]]}return[]}
-function route(n,to,dest){const from=regionOf(n.x,n.z);if(from.t=="room"&&to.t=="room"&&from.r==to.r)return[dest];return[...outPts(from),...outPts(to).slice().reverse(),dest]}
+function npcRoute(n,to,dest){const from=regionOf(n.x,n.z);if(from.t=="room"&&to.t=="room"&&from.r==to.r)return[dest];return[...outPts(from),...outPts(to).slice().reverse(),dest]}
 const homeRegion=h=>h=="hall"?{t:"hall"}:h=="corr"?{t:"corr"}:h=="bobroom"?{t:"bob"}:{t:"room",r:h};
 function npcDest(n){npcPick(n);return[n.tx,n.tz]}
 // In the daytime, pulling the fire alarm makes everyone walk out through the entrance by the stage. They come back after it stops.
 function npcTick(dt,on){
   const evac=on&&alarm.on&&phase=="day";
-  if(evac&&!evacOn){evacOn=true;note("FIRE ALARM! Everyone is evacuating!");npcs.forEach(n=>{if(n.mode!="out"){n.path=route(n,{t:"room",r:"stage"},at("stage",5,3.2));n.mode="evac"}})}
+  if(evac&&!evacOn){evacOn=true;note("FIRE ALARM! Everyone is evacuating!");npcs.forEach(n=>{if(n.mode!="out"){n.path=npcRoute(n,{t:"room",r:"stage"},at("stage",5,3.2));n.mode="evac"}})}
   else if(!evac&&evacOn){evacOn=false;npcs.forEach(n=>{if(n.mode=="out")n.back=2+Math.random()*12})}
   npcs.forEach(n=>{
     if(!on){n.g.visible=false;return}
-    if(n.mode=="out"){n.g.visible=false;if(!evacOn&&(n.back-=dt)<=0){const q=at("stage",5,3.2);n.x=q[0];n.z=q[1];n.mode="return";n.path=route(n,homeRegion(n.home),npcDest(n))}return}
+    if(n.mode=="out"){n.g.visible=false;if(!evacOn&&(n.back-=dt)<=0){const q=at("stage",5,3.2);n.x=q[0];n.z=q[1];n.mode="return";n.path=npcRoute(n,homeRegion(n.home),npcDest(n))}return}
     n.g.visible=true;
     if(n.path&&n.path.length){n.tx=n.path[0][0];n.tz=n.path[0][1]}
     const dx=n.tx-n.x,dz=n.tz-n.z,d=Math.hypot(dx,dz),spd=n.mode=="evac"?n.sp*2.6:n.mode=="return"?n.sp*1.3:n.sp;
